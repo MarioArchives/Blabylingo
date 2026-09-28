@@ -3,7 +3,7 @@
    users/{uid}/progress/{storagePrefix}-{topic}, one document per topic holding the same records as this browser,
    plus a small topic summary (K.summary, from core/insights.js) alongside them:
      items: { 'past|irregular|Wczoraj ___ do kina.|iść': { n: 5, ok: 3, streak: 0, last: 0, t: 1790000000000 }, … },
-     language: 'polish', topic: { id: 'past', pl: …, en: … }, groups: [{ id, pl, en, colour, total }], glosses: { … }
+     language: 'polish', topic: { id: 'past', pl: …, en: … }, groups: [{ id, pl, short?, en, colour, total }], glosses: { … }
    n is times answered, ok times right (so n - ok were wrong), last 0 means wrong the last time, t when last answered.
    The summary exists so account.html can show topic and word names for every language's progress without loading
    that language's data files: polish/ and spanish/ data files define the same globals (SENTENCES, CASES, …), so

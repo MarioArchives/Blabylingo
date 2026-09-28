@@ -9,7 +9,7 @@ const PRESENT_TENSE = {
 
   groups: [
     {
-      id: 'present-reg', pl: 'Regulares', en: 'Regular verbs', q: 'hablo, comes, vive',
+      id: 'present-reg', pl: 'Regulares', short: 'Regul.', en: 'Regular verbs', q: 'hablo, comes, vive',
       summary: 'Drop the -ar, -er or -ir and add the ending for the person. -ar verbs use a: hablo, hablas, habla, hablamos, hablan. -er and -ir verbs use e, and share every ending except nosotros: comemos, vivimos.',
       tables: [
         { title: 'hablar, comer, vivir: three sets of endings',
@@ -55,7 +55,7 @@ const PRESENT_TENSE = {
       ],
     },
     {
-      id: 'present-stem', pl: 'Cambio de raíz', en: 'Stem-changing verbs', q: 'quiero, puedo, pido',
+      id: 'present-stem', pl: 'Cambio de raíz', short: 'Raíz', en: 'Stem-changing verbs', q: 'quiero, puedo, pido',
       summary: 'In many common verbs the stressed vowel of the stem changes: e becomes ie (querer → quiero), o becomes ue (poder → puedo), or e becomes i (pedir → pido). The change happens in every person except nosotros, where the stress falls on the ending. Jugar is the only verb where u becomes ue.',
       tables: [
         { title: 'The three stem changes',
@@ -96,7 +96,7 @@ const PRESENT_TENSE = {
       ],
     },
     {
-      id: 'present-yo', pl: 'Yo irregular', en: 'Irregular yo form', q: 'hago, tengo, conozco',
+      id: 'present-yo', pl: 'Yo irregular', short: 'Yo irr.', en: 'Irregular yo form', q: 'hago, tengo, conozco',
       summary: 'A group of very common verbs is irregular only in the yo form. Many add a g: hago, pongo, salgo, traigo, tengo, vengo, digo. Verbs in -cer and -cir add a z before the c: conozco, conduzco. A few are simply short: doy, veo, sé. The other persons are regular, apart from the stem changes of tener, venir and decir.',
       tables: [
         { title: 'Verbs with -go in the yo form',
@@ -135,7 +135,7 @@ const PRESENT_TENSE = {
       ],
     },
     {
-      id: 'present-irr', pl: 'Ser, estar, ir', en: 'Irregular verbs', q: 'soy, estoy, voy',
+      id: 'present-irr', pl: 'Ser, estar, ir', short: 'Irreg.', en: 'Irregular verbs', q: 'soy, estoy, voy',
       summary: 'The three most common verbs are irregular in almost every person. Ser (soy, eres, es) is for identity, origin, profession and time. Estar (estoy, estás, está) is for location and changing states. Ir (voy, vas, va) is to go, and also builds the near future: voy a comer.',
       tables: [
         { title: 'ser, estar, ir',
@@ -170,7 +170,7 @@ const PRESENT_TENSE = {
       ],
     },
     {
-      id: 'present-reflex', pl: 'Reflexivos', en: 'Reflexive verbs', q: 'me levanto, te duchas',
+      id: 'present-reflex', pl: 'Reflexivos', short: 'Reflex.', en: 'Reflexive verbs', q: 'me levanto, te duchas',
       summary: 'Reflexive verbs carry a pronoun that matches the person: me, te, se, nos, se. The pronoun goes before the conjugated verb: me levanto, nos acostamos. The verb itself follows the usual patterns, including stem changes: me acuesto, se viste. Many daily-routine verbs are reflexive.',
       tables: [
         { title: 'Pronoun + verb',

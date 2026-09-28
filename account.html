@@ -102,12 +102,13 @@
     const rows = scores.map(s => `<tr>
       <th scope="row">${esc(s.pl)} <i>${esc(s.en)}</i></th>
       <td>${s.mastered} of ${s.total}</td>
+      <td>${s.correct} of ${s.total}</td>
       <td>${pct(s.accuracy)}</td>
     </tr>`).join('');
     // hidden for sighted readers via a wrapper: a table ignores the 1px box that .sr-only relies on
     const table = `<table class="radar-table">
       <caption class="sr-only">Group scores</caption>
-      <thead><tr><th scope="col">Group</th><th scope="col">Mastered</th><th scope="col">Accuracy</th></tr></thead>
+      <thead><tr><th scope="col">Group</th><th scope="col">Mastered</th><th scope="col">Answered right</th><th scope="col">Accuracy</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
     return visible ? table : `<div class="sr-only">${table}</div>`;
@@ -122,11 +123,26 @@
     const { summary, scores } = topic;
     const mastered = scores.reduce((sum, s) => sum + s.mastered, 0);
     const total = scores.reduce((sum, s) => sum + s.total, 0);
+    const correct = scores.reduce((sum, s) => sum + s.correct, 0);
     const svg = INSIGHTS.radarSVG(scores, { label: summary.topic.en });
+    const bar = (cls, label, count) => {
+      const width = total > 0 ? Math.round((count / total) * 1000) / 10 : 0;
+      return `<li class="radar-bar radar-bar-${cls}">
+        <span class="radar-bar-label">${label}</span>
+        <span class="radar-bar-track" aria-hidden="true"><span class="radar-bar-fill" style="width: ${width}%"></span></span>
+        <span class="radar-bar-count">${count}<span class="sr-only"> of ${total}</span></span>
+      </li>`;
+    };
     return `<article class="radar-card">
-      <h3>${esc(summary.topic.en)} <span class="radar-subtitle">${esc(summary.topic.pl)}</span></h3>
+      <header class="radar-head">
+        <h3>${esc(summary.topic.en)} <span class="radar-subtitle">${esc(summary.topic.pl)}</span></h3>
+        <p class="radar-total"><b>${total}</b> sentences</p>
+      </header>
       ${svg}
-      <p class="radar-caption">${mastered} of ${total} sentences mastered</p>
+      <footer class="radar-foot">
+        ${svg ? `<p class="radar-zoom">At ${Math.round(INSIGHTS.radarScaleFor(scores) * 100)}% zoom</p>` : ''}
+        <ul class="radar-legend">${bar('correct', 'Answered right', correct)}${bar('mastered', 'Mastered', mastered)}</ul>
+      </footer>
       ${groupTable(scores, !svg)}
     </article>`;
   }

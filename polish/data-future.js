@@ -7,7 +7,7 @@ const FUTURE_TENSE = {
   intro: 'Imperfective verbs (ongoing or repeated actions) form the future with będę plus the verb: będę czytać. Perfective verbs (one completed action) have no present tense, so their present-looking forms already mean the future: przeczytam.',
   groups: [
     {
-      id: 'future-byc', pl: 'Być: będę', en: 'Future of być', q: 'Jutro będę w domu.',
+      id: 'future-byc', pl: 'Być: będę', short: 'Być', en: 'Future of być', q: 'Jutro będę w domu.',
       summary: 'Być is the only Polish verb with its own future forms. They mean “will be”, and they are also the building block of the compound future.',
       tables: [
         { title: 'Być in the future',
@@ -30,7 +30,7 @@ const FUTURE_TENSE = {
       ],
     },
     {
-      id: 'future-bede-inf', pl: 'Będę + bezokol.', en: 'Będę + infinitive', q: 'będę czytać',
+      id: 'future-bede-inf', pl: 'Będę + bezokol.', short: '+bezok.', en: 'Będę + infinitive', q: 'będę czytać',
       summary: 'The future of być plus the infinitive of an imperfective verb. Use it for actions that will be in progress, will last some time or will be repeated. Only będę changes, the infinitive stays the same.',
       tables: [
         { title: 'Czytać (to read) in the compound future',
@@ -53,7 +53,7 @@ const FUTURE_TENSE = {
       ],
     },
     {
-      id: 'future-bede-l', pl: 'Będę + czytał', en: 'Będę + -ł form', q: 'będę czytał / czytała',
+      id: 'future-bede-l', pl: 'Będę + czytał', short: '+ -ł', en: 'Będę + -ł form', q: 'będę czytał / czytała',
       summary: 'The future of być plus the past-tense form of an imperfective verb, without any personal ending. It means exactly the same as będę + infinitive, but it shows gender and number. With musieć, móc and chcieć it is the only natural choice.',
       tables: [
         { title: 'Singular',
@@ -93,7 +93,7 @@ const FUTURE_TENSE = {
       ],
     },
     {
-      id: 'future-perf', pl: 'Dokonane: zrobię', en: 'Perfective future', q: 'zrobię, napiszę, przeczytam',
+      id: 'future-perf', pl: 'Dokonane: zrobię', short: 'Dokon.', en: 'Perfective future', q: 'zrobię, napiszę, przeczytam',
       summary: 'A perfective verb describes one completed action, so it cannot happen “right now”. Conjugate it with the ordinary present-tense endings and the meaning is future. No będę is needed or allowed.',
       tables: [
         { title: 'The same three ending patterns as the present tense',
@@ -135,7 +135,7 @@ const FUTURE_TENSE = {
       ],
     },
     {
-      id: 'future-irreg', pl: 'Pójdę, wezmę', en: 'Irregular perfectives', q: 'pójdę, wezmę, dam, zjem',
+      id: 'future-irreg', pl: 'Pójdę, wezmę', short: 'Niereg.', en: 'Irregular perfectives', q: 'pójdę, wezmę, dam, zjem',
       summary: 'The most common perfective verbs are also the least regular. Learn the ja form and the oni form: everything else follows from those two.',
       tables: [
         { title: 'Going and coming',
@@ -196,7 +196,7 @@ const FUTURE_TENSE = {
       ],
     },
     {
-      id: 'future-aspect', pl: 'Który aspekt?', en: 'Choosing the aspect', q: 'będę pisać czy napiszę?',
+      id: 'future-aspect', pl: 'Który aspekt?', short: 'Aspekt', en: 'Choosing the aspect', q: 'będę pisać czy napiszę?',
       summary: 'Here you get both verbs of a pair and choose. If the sentence is about a process, a length of time or a habit, use będę + the imperfective verb. If it is about one action that gets done, use the perfective verb on its own.',
       tables: [
         { title: 'Two futures side by side',

@@ -4,7 +4,7 @@
 
 const CASES = [
   {
-    id: 'nom', pl: 'Mianownik', en: 'Nominative', q: 'kto? co?', qEn: 'who? what?',
+    id: 'nom', pl: 'Mianownik', short: 'Mian.', en: 'Nominative', q: 'kto? co?', qEn: 'who? what?',
     summary: 'The dictionary form. It names the subject, the person or thing doing the action.',
     uses: [
       { t: 'The subject of the sentence', ex: 'Moja siostra mieszka w Gdańsku.', en: 'My sister lives in Gdańsk.' },
@@ -45,7 +45,7 @@ const CASES = [
     ],
   },
   {
-    id: 'gen', pl: 'Dopełniacz', en: 'Genitive', q: 'kogo? czego?', qEn: 'of whom? of what?',
+    id: 'gen', pl: 'Dopełniacz', short: 'Dop.', en: 'Genitive', q: 'kogo? czego?', qEn: 'of whom? of what?',
     summary: 'The case of “of”, of absence and of quantity. It is the most frequent case after the nominative.',
     uses: [
       { t: 'A negated direct object', ex: 'Nie mam czasu.', en: 'I don’t have time.' },
@@ -88,7 +88,7 @@ const CASES = [
     ],
   },
   {
-    id: 'dat', pl: 'Celownik', en: 'Dative', q: 'komu? czemu?', qEn: 'to whom? to what?',
+    id: 'dat', pl: 'Celownik', short: 'Cel.', en: 'Dative', q: 'komu? czemu?', qEn: 'to whom? to what?',
     summary: 'The receiver. It marks the person something is given, said or done to.',
     uses: [
       { t: 'The person who receives something', ex: 'Daję prezent siostrze.', en: 'I’m giving a present to my sister.' },
@@ -124,7 +124,7 @@ const CASES = [
     ],
   },
   {
-    id: 'acc', pl: 'Biernik', en: 'Accusative', q: 'kogo? co?', qEn: 'whom? what?',
+    id: 'acc', pl: 'Biernik', short: 'Bier.', en: 'Accusative', q: 'kogo? co?', qEn: 'whom? what?',
     summary: 'The direct object. It marks the thing the action lands on.',
     uses: [
       { t: 'The direct object of most verbs: mieć, lubić, znać, jeść, pić, czytać, widzieć, kupować', ex: 'Czytam książkę.', en: 'I’m reading a book.' },
@@ -167,7 +167,7 @@ const CASES = [
     ],
   },
   {
-    id: 'ins', pl: 'Narzędnik', en: 'Instrumental', q: 'z kim? z czym?', qEn: 'with whom? with what?',
+    id: 'ins', pl: 'Narzędnik', short: 'Narz.', en: 'Instrumental', q: 'z kim? z czym?', qEn: 'with whom? with what?',
     summary: 'The case of “with” and “by means of”. It also says what someone is.',
     uses: [
       { t: 'After z meaning “with”', ex: 'kawa z mlekiem', en: 'coffee with milk' },
@@ -202,7 +202,7 @@ const CASES = [
     ],
   },
   {
-    id: 'loc', pl: 'Miejscownik', en: 'Locative', q: 'o kim? o czym?', qEn: 'about whom? about what?',
+    id: 'loc', pl: 'Miejscownik', short: 'Miejsc.', en: 'Locative', q: 'o kim? o czym?', qEn: 'about whom? about what?',
     summary: 'The case of place and topic. It never appears without a preposition.',
     uses: [
       { t: 'Position, after w (in), na (on, at) and przy (by)', ex: 'Mieszkam w Polsce.', en: 'I live in Poland.' },
@@ -238,7 +238,7 @@ const CASES = [
     ],
   },
   {
-    id: 'voc', pl: 'Wołacz', en: 'Vocative', q: 'o!', qEn: 'calling someone',
+    id: 'voc', pl: 'Wołacz', short: 'Woł.', en: 'Vocative', q: 'o!', qEn: 'calling someone',
     summary: 'The calling form. You use it when you speak to someone directly.',
     uses: [
       { t: 'Greeting or calling a person', ex: 'Cześć, Marku!', en: 'Hi, Marek!' },

@@ -49,28 +49,47 @@
 .lang-head h2 { font: 700 1.75rem var(--serif); }
 
 .radar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 1.25rem; }
-.radar-card { display: grid; gap: .75rem; align-content: start; background: var(--paper); border: 2px solid var(--ink); border-radius: 2px; padding: 1.25rem; }
+.radar-card { display: flex; flex-direction: column; gap: .75rem; background: var(--paper); border: 2px solid var(--ink); border-radius: 2px; padding: 1.25rem; }
 .radar-card h3 { margin: 0; font: 700 1.1875rem var(--serif); }
+.radar-head { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; }
+.radar-total { margin: 0; white-space: nowrap; color: var(--ink-soft); font-size: .9375rem; }
+.radar-total b { color: var(--ink); font-weight: 700; }
 .radar-subtitle { display: block; font: italic 400 .9375rem var(--serif); color: var(--ink-soft); }
 .radar-caption { color: var(--ink-soft); font-size: .9375rem; }
 .radar-card-stale { color: var(--ink-soft); }
+
+/* Zoom line and legend: pinned to the card's foot so every card's bars line up across a row */
+.radar-foot { margin-top: auto; display: grid; gap: .5rem; }
+.radar-legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto 1fr auto; gap: .5rem .75rem; align-items: center; font-size: .9375rem; }
+.radar-bar { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: center; }
+.radar-bar-label { color: var(--ink-soft); }
+.radar-bar-track { height: .625rem; background: var(--linen); border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; }
+.radar-bar-fill { display: block; height: 100%; background: var(--bar); border-radius: inherit; }
+.radar-bar-count { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; min-width: 2ch; }
+.radar-zoom { margin: 0; text-align: center; color: var(--ink-soft); opacity: .75; font-size: .8125rem; }
+.radar-bar-mastered { --bar: var(--mastered); }
+.radar-bar-correct { --bar: var(--correct); }
 .radar-card-stale h3 { color: var(--ink); }
 
 .radar-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
 .radar-table th, .radar-table td { text-align: left; padding: .375rem .5rem; border-bottom: 1px solid var(--rule); }
 .radar-table th i { font-style: italic; font-weight: 400; color: var(--ink-soft); }
 
+/* The two progress colours, shared by the radar shapes and the legend bars */
+:root { --mastered: #D4A72C; --correct: #4B6B3F; }
+
 /* Radar chart: no colours set here beyond the design tokens, everything else comes from insights.js's markup */
 .radar { display: block; width: 100%; height: auto; overflow: visible; }
 .radar-ring { fill: none; stroke: var(--rule); stroke-width: 1; }
 .radar-axis { stroke: var(--rule); stroke-width: 1; }
-.radar-shape { fill: var(--ink); fill-opacity: .12; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
-.radar-dot { fill: var(--c); stroke: var(--paper); stroke-width: 2; }
+.radar-shape { fill: var(--mastered); fill-opacity: .45; stroke: var(--mastered); stroke-width: 2; stroke-linejoin: round; }
+.radar-shape-correct { fill: var(--correct); fill-opacity: .2; stroke: var(--correct); stroke-width: 2; stroke-linejoin: round; }
+.radar-dot { fill: var(--ink); stroke: var(--paper); stroke-width: 2; }
 .radar-hit { fill: transparent; pointer-events: all; cursor: pointer; }
 .radar-point:hover .radar-dot, .radar-point:focus-visible .radar-dot { r: 7; stroke-width: 3; }
 .radar-point:focus-visible .radar-hit { fill: var(--linen); opacity: .5; }
 .radar-point { outline: none; }
-.radar-label { font-family: var(--sans); font-weight: 400; fill: var(--ink-soft); }   /* size comes from radarSVG, which fits the chart to it */
+.radar-label { font-family: var(--sans); font-weight: 400; fill: var(--ink-soft); }   /* size comes from radarSVG */
 
 /* Actions: .account-links, a.btn and .link-btn already come from core/styles.css */
 

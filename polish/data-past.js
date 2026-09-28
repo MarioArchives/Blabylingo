@@ -8,7 +8,7 @@ const PAST_TENSE = {
 
   groups: [
     {
-      id: 'past-regular', pl: 'Regularne', en: 'Regular verbs', q: 'czytać → czytał',
+      id: 'past-regular', pl: 'Regularne', short: 'Regul.', en: 'Regular verbs', q: 'czytać → czytał',
       summary: 'Verbs in -ać, -ić, -yć and -ować simply drop -ć and add -ł- plus the ending. The vowel before -ł- never changes.',
       tables: [
         { title: 'czytać, to read: singular',
@@ -47,7 +47,7 @@ const PAST_TENSE = {
       ],
     },
     {
-      id: 'past-ec', pl: 'Czasowniki -eć', en: 'Verbs in -eć', q: 'mieć → miał, mieli',
+      id: 'past-ec', pl: 'Czasowniki -eć', short: '-eć', en: 'Verbs in -eć', q: 'mieć → miał, mieli',
       summary: 'Verbs in -eć turn the e into a before ł: miał, miała, miało, miały. Only the forms with -li, the ones for groups with a man, keep the e: mieli.',
       tables: [
         { title: 'mieć, to have: singular',
@@ -89,7 +89,7 @@ const PAST_TENSE = {
       ],
     },
     {
-      id: 'past-byc', pl: 'Być', en: 'To be', q: 'być → był, była, byli',
+      id: 'past-byc', pl: 'Być', short: 'Być', en: 'To be', q: 'być → był, była, byli',
       summary: 'Być is fully regular in the past: by- plus the usual endings. You need it all the time, also for “there was”, the weather and “nie było”.',
       tables: [
         { title: 'być, to be: singular',
@@ -119,7 +119,7 @@ const PAST_TENSE = {
       ],
     },
     {
-      id: 'past-isc', pl: 'Iść, pójść', en: 'Iść and its family', q: 'iść → szedł, szła, szli',
+      id: 'past-isc', pl: 'Iść, pójść', short: 'Iść', en: 'Iść and its family', q: 'iść → szedł, szła, szli',
       summary: 'Iść builds its past on a different stem: szedł for a man, but szła, szło, szli, szły without the e. Every prefixed verb (pójść, przyjść, wyjść, wejść) copies this pattern.',
       tables: [
         { title: 'iść, to go on foot: singular',
@@ -157,7 +157,7 @@ const PAST_TENSE = {
       ],
     },
     {
-      id: 'past-irregular', pl: 'Nieregularne', en: 'Other irregular stems', q: 'jeść → jadł, móc → mógł',
+      id: 'past-irregular', pl: 'Nieregularne', short: 'Niereg.', en: 'Other irregular stems', q: 'jeść → jadł, móc → mógł',
       summary: 'Infinitives in -ść, -źć and -c hide a consonant that comes back in the past (jeść → jadł, móc → mógł). Verbs in -ąć switch between ą and ę (wziął, wzięła).',
       tables: [
         { title: 'Infinitives in -ść, -źć and -c',
@@ -204,7 +204,7 @@ const PAST_TENSE = {
       ],
     },
     {
-      id: 'past-plural', pl: 'Liczba mnoga', en: 'Plural: -li or -ły', q: 'oni byli, one były',
+      id: 'past-plural', pl: 'Liczba mnoga', short: 'Mnoga', en: 'Plural: -li or -ły', q: 'oni byli, one były',
       summary: 'The plural has two sets of endings. Groups that include at least one man take -li. Groups of women, children, animals and things take -ły.',
       tables: [
         { title: 'The two plurals',

@@ -44,7 +44,7 @@ const INSIGHTS = (() => {
   };
 
   const groupScores = (summary, items) => {
-    const stats = Object.fromEntries(summary.groups.map(g => [g.id, { seen: 0, mastered: 0, n: 0, ok: 0 }]));
+    const stats = Object.fromEntries(summary.groups.map(g => [g.id, { seen: 0, mastered: 0, correct: 0, n: 0, ok: 0 }]));
     for (const [key, r] of Object.entries(items || {})) {
       if (!validRecord(r)) continue;
       const { topic, group } = parseKey(key);
@@ -53,13 +53,15 @@ const INSIGHTS = (() => {
       if (!s) continue;
       s.seen++; s.n += r.n; s.ok += r.ok;
       if (mastered(r)) s.mastered++;
+      if (r.ok > 0) s.correct++;                    // answered right at least once
     }
     return summary.groups.map(g => {
       const s = stats[g.id];
       return {
-        id: g.id, pl: g.pl, en: g.en, colour: g.colour, total: g.total,
-        seen: s.seen, mastered: s.mastered, n: s.n, ok: s.ok,
+        id: g.id, pl: g.pl, short: g.short || g.pl, en: g.en, colour: g.colour, total: g.total,
+        seen: s.seen, mastered: s.mastered, correct: s.correct, n: s.n, ok: s.ok,
         share: g.total > 0 ? Math.min(1, Math.max(0, s.mastered / g.total)) : 0,
+        correctShare: g.total > 0 ? Math.min(1, Math.max(0, s.correct / g.total)) : 0,
         accuracy: s.n > 0 ? s.ok / s.n : null,
       };
     });
@@ -76,7 +78,7 @@ const INSIGHTS = (() => {
     return {
       language,
       topic: { id: topic.id, pl: topic.pl, en: topic.en },
-      groups: topic.groups.map(g => ({ id: g.id, pl: g.pl, en: g.en, colour: g.colour, total: totalsByGroup[g.id] || 0 })),
+      groups: topic.groups.map(g => ({ id: g.id, pl: g.pl, ...(g.short ? { short: g.short } : {}), en: g.en, colour: g.colour, total: totalsByGroup[g.id] || 0 })),
       glosses,
     };
   };
@@ -114,27 +116,35 @@ const INSIGHTS = (() => {
     return axisPoint(values.length, i, radius * clamped, cx, cy);
   });
 
-  // Split a label near its middle space so it fits a two-line <tspan>; short labels pass through untouched.
-  const wrapLabel = text => {
-    if (text.length <= 10) return [text];
-    const mid = text.length / 2;
-    let best = -1, bestDist = Infinity;
-    for (let i = 0; i < text.length; i++) {
-      if (text[i] !== ' ') continue;
-      const d = Math.abs(i - mid);
-      if (d < bestDist) { bestDist = d; best = i; }
-    }
-    return best === -1 ? [text] : [text.slice(0, best), text.slice(best + 1)];
-  };
+  // The outer ring's value: the smallest step that fits the best 'answered right' share,
+  // so early progress fills the chart and it zooms out in steps (not every answer) as you improve.
+  const RADAR_STEPS = [0.1, 0.25, 0.5, 1];
+  const radarScale = maxShare => RADAR_STEPS.find(step => maxShare <= step + 1e-9) || 1;
+  const clampShare = v => Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0;
+  const radarScaleFor = scores => radarScale(Math.max(0, ...(scores || []).map(s => Math.max(clampShare(s.share), clampShare(s.correctShare)))));
+
+  // Every chart uses the same frame, so shapes are the same size whatever the group count or names.
+  // It leaves room for a label of LABEL_CHARS at the end of any axis; longer names are squeezed to fit.
+  const RADAR_R = 100, LABEL_GAP = 12, LABEL_FONT = 17, LABEL_CHARS = 7;
+  const CHAR_WIDTH = LABEL_FONT * 0.58;             // a generous Lato average, so estimated widths never fall short
+  const LABEL_ROOM = LABEL_CHARS * CHAR_WIDTH;
+  const RADAR_VIEWBOX = (() => {
+    const reach = RADAR_R + LABEL_GAP;
+    const x = Math.ceil(reach + LABEL_ROOM) + 4;
+    const top = Math.ceil(reach + LABEL_FONT) + 4, bottom = Math.ceil(reach + 0.3 * LABEL_FONT) + 4;
+    return `${-x} ${-top} ${2 * x} ${top + bottom}`;
+  })();
 
   const radarSVG = (scores, { label = '' } = {}) => {
     if (!scores || scores.length < 3) return '';
     const n = scores.length;
-    const r = 100, cx = 0, cy = 0;                   // plot around the origin; the viewBox is fitted to the labels below
-    const fontSize = 15, charWidth = fontSize * 0.58; // a generous Lato average, so estimated widths never fall short
+    const r = RADAR_R, cx = 0, cy = 0;
     const round = v => Math.round(v * 10) / 10;
     const pointsAttr = pts => pts.map(([x, y]) => `${round(x)},${round(y)}`).join(' ');
-    const shares = scores.map(s => Number.isFinite(s.share) ? Math.min(1, Math.max(0, s.share)) : 0);
+    const shares = scores.map(s => clampShare(s.share));
+    const correctShares = scores.map((s, i) => Math.max(shares[i], clampShare(s.correctShare)));  // never inside the mastered shape
+    const scale = radarScaleFor(scores);
+    const scaled = v => Math.min(1, v / scale);
 
     const rings = [0.25, 0.5, 0.75, 1].map(frac => {
       const pts = Array.from({ length: n }, (_, i) => axisPoint(n, i, r * frac, cx, cy));
@@ -146,42 +156,34 @@ const INSIGHTS = (() => {
       return `<line class="radar-axis" x1="${round(cx)}" y1="${round(cy)}" x2="${round(x)}" y2="${round(y)}"/>`;
     }).join('');
 
-    const shapePts = shares.map((share, i) => axisPoint(n, i, r * share, cx, cy));
+    const shapePts = shares.map((share, i) => axisPoint(n, i, r * scaled(share), cx, cy));
     const shape = `<polygon class="radar-shape" points="${pointsAttr(shapePts)}"/>`;
+    const correctPts = correctShares.map((share, i) => axisPoint(n, i, r * scaled(share), cx, cy));
+    const correctShape = `<polygon class="radar-shape-correct" points="${pointsAttr(correctPts)}"/>`;
 
     const points = scores.map((s, i) => {
       const [x, y] = shapePts[i];
       const acc = s.accuracy == null ? 'not practised yet' : `${Math.round(s.accuracy * 100)}% right`;
-      const tip = esc(`${s.en}: ${s.mastered} of ${s.total} mastered · ${acc}`);
-      return `<g class="radar-point" tabindex="0" data-tip="${tip}" style="--c: var(--${esc(s.colour)})">`
+      const tip = esc(`${s.en}: ${s.mastered} of ${s.total} mastered · ${s.correct || 0} answered right · ${acc}`);
+      return `<g class="radar-point" tabindex="0" data-tip="${tip}">`
         + `<circle class="radar-hit" r="16" cx="${round(x)}" cy="${round(y)}"/>`
         + `<circle class="radar-dot" r="5" cx="${round(x)}" cy="${round(y)}"/></g>`;
     }).join('');
 
-    // Labels sit past each axis end; track their estimated extent so long names are never cut off
-    const box = { x0: -r, x1: r, y0: -r, y1: r };
+    // Short names at each axis end; anything wider than the frame allows is squeezed
     const labels = scores.map((s, i) => {
-      const [x, y] = axisPoint(n, i, r + 16, cx, cy);
+      const [x, y] = axisPoint(n, i, r + LABEL_GAP, cx, cy);
       const anchor = Math.abs(x - cx) < 1 ? 'middle' : x > cx ? 'start' : 'end';
-      const raw = wrapLabel(s.pl);
-      const width = Math.max(...raw.map(line => line.length)) * charWidth;
-      const left = anchor === 'start' ? x : anchor === 'end' ? x - width : x - width / 2;
-      const top = raw.length === 1 ? y - fontSize : y - 1.5 * fontSize;
-      box.x0 = Math.min(box.x0, left); box.x1 = Math.max(box.x1, left + width);
-      box.y0 = Math.min(box.y0, top); box.y1 = Math.max(box.y1, top + (raw.length === 1 ? 1.3 : 2.6) * fontSize);
-      const lines = raw.map(esc);
-      const body = lines.length === 1
-        ? lines[0]
-        : lines.map((line, li) => `<tspan x="${round(x)}" dy="${li === 0 ? '-0.5em' : '1.1em'}">${line}</tspan>`).join('');
-      return `<text class="radar-label" x="${round(x)}" y="${round(y)}" text-anchor="${anchor}" font-size="${fontSize}">${body}</text>`;
+      const text = String(s.short || s.pl);
+      const fit = text.length * CHAR_WIDTH > LABEL_ROOM ? ` textLength="${round(LABEL_ROOM)}" lengthAdjust="spacingAndGlyphs"` : '';
+      return `<text class="radar-label" x="${round(x)}" y="${round(y)}" text-anchor="${anchor}" font-size="${LABEL_FONT}"${fit}`
+        + `><title>${esc(s.pl)}</title>${esc(text)}</text>`;
     }).join('');
-    const pad = 4;
-    const viewBox = [box.x0 - pad, box.y0 - pad, box.x1 - box.x0 + 2 * pad, box.y1 - box.y0 + 2 * pad].map(round).join(' ');
 
-    const aria = `${esc(label)}: ${scores.map((s, i) => `${esc(s.pl)} ${Math.round(shares[i] * 100)}%`).join(', ')}`;
+    const aria = `${esc(label)}, zoomed to ${Math.round(scale * 100)}%: ${scores.map((s, i) => `${esc(s.pl)} ${Math.round(shares[i] * 100)}% mastered, ${Math.round(correctShares[i] * 100)}% answered right`).join(', ')}`;
 
-    return `<svg class="radar" viewBox="${viewBox}" role="img" aria-label="${aria}">`
-      + `${rings}${axes}${shape}${points}${labels}</svg>`;
+    return `<svg class="radar" viewBox="${RADAR_VIEWBOX}" role="img" aria-label="${aria}">`
+      + `${rings}${axes}${correctShape}${shape}${points}${labels}</svg>`;
   };
 
   const TOPIC_ORDER = ['cases', 'present', 'past', 'future', 'numbers', 'idioms'];
@@ -251,6 +253,8 @@ const INSIGHTS = (() => {
     currentStreak,
     totals,
     radarPoints,
+    radarScale,
+    radarScaleFor,
     radarSVG,
     accountModel,
   };

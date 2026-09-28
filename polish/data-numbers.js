@@ -13,7 +13,7 @@ const NUMBERS = {
   intro: 'A number decides the case of the noun after it. One takes the singular, two to four take the nominative plural, and five and up take the genitive plural. Groups of men have their own forms, ordinals (first, second) behave like adjectives, and inside a sentence the number itself changes with the case. Start with Słownie to learn how to say the numbers themselves.',
   groups: [
     {
-      id: 'num-say', pl: 'Słownie', en: 'Saying numbers', q: '47 → czterdzieści siedem',
+      id: 'num-say', pl: 'Słownie', short: 'Słownie', en: 'Saying numbers', q: '47 → czterdzieści siedem',
       summary: 'Build a number from its parts, biggest first, with no word for “and”: 347 is trzysta czterdzieści siedem. The teens end in -naście, the tens in -dzieścia, -dzieści or -dziesiąt, and the hundreds in -ście, -sta or -set. Tysiąc itself follows the counting rule: dwa tysiące, pięć tysięcy.',
       tables: [
         { title: 'Units and teens',
@@ -66,7 +66,7 @@ const NUMBERS = {
       ],
     },
     {
-      id: 'num-2-4', pl: 'Dwa–cztery', en: 'Two to four', q: 'dwa koty, dwie kobiety',
+      id: 'num-2-4', pl: 'Dwa–cztery', short: '2–4', en: 'Two to four', q: 'dwa koty, dwie kobiety',
       summary: 'After 2, 3 and 4 the noun goes into the nominative plural and the verb is plural, just as with any plural subject. Two has a separate feminine form, dwie. Numbers ending in 2, 3 or 4 (22, 33, 104) follow the same rule, except 12, 13 and 14.',
       cases: ['nom.pl'],
       casesNote: 'After 2, 3 and 4 the noun takes the nominative plural. Find its gender column. In the accusative these forms stay the same, except for men.',
@@ -101,7 +101,7 @@ const NUMBERS = {
       ],
     },
     {
-      id: 'num-5plus', pl: 'Pięć i więcej', en: 'Five and up', q: 'pięć kotów, dużo książek',
+      id: 'num-5plus', pl: 'Pięć i więcej', short: '5+', en: 'Five and up', q: 'pięć kotów, dużo książek',
       summary: 'From 5 up the noun goes into the genitive plural and the verb is singular (neuter in the past tense). The same goes for 12 to 14, for bigger numbers ending in 5 to 9, 0 or 1, and for words of quantity: kilka, wiele, dużo, mało, ile.',
       cases: ['gen.pl'],
       casesNote: 'From 5 up the noun takes the genitive plural. Find its gender column.',
@@ -134,7 +134,7 @@ const NUMBERS = {
       ],
     },
     {
-      id: 'num-men', pl: 'Mężczyźni', en: 'Groups with men', q: 'dwóch studentów, pięciu panów',
+      id: 'num-men', pl: 'Mężczyźni', short: 'Męskie', en: 'Groups with men', q: 'dwóch studentów, pięciu panów',
       summary: 'When the noun means men or a group with at least one man, numbers take their own forms: dwóch, trzech, czterech, pięciu, kilku, wielu, ilu. They go with the genitive plural and a singular verb. For 2 to 4 there is also an older form, dwaj, trzej, czterej, which takes the nominative plural and a plural verb.',
       cases: ['gen.pl', 'nom.pl'],
       casesNote: 'Dwóch, pięciu, kilku and the other men forms take the genitive plural. Dwaj, trzej and czterej take the nominative plural: use the personal (men) column.',
@@ -169,7 +169,7 @@ const NUMBERS = {
       ],
     },
     {
-      id: 'num-ordinal', pl: 'Porządkowe', en: 'First, second, third', q: 'pierwszy, drugi, trzeci',
+      id: 'num-ordinal', pl: 'Porządkowe', short: 'Porz.', en: 'First, second, third', q: 'pierwszy, drugi, trzeci',
       summary: 'Ordinal numbers are adjectives, so they take adjective endings and agree with their noun in gender, number and case. Drugi and trzeci end in -i and take the soft endings. They are used for floors, dates, clock times and anything in an order.',
       tables: [
         { title: 'Ordinals in the nominative',
@@ -204,7 +204,7 @@ const NUMBERS = {
       ],
     },
     {
-      id: 'num-cases', pl: 'Odmiana', en: 'Numbers in other cases', q: 'z dwoma, o pięciu',
+      id: 'num-cases', pl: 'Odmiana', short: 'Odmiana', en: 'Numbers in other cases', q: 'z dwoma, o pięciu',
       summary: 'Numbers change with the case too. In the genitive, dative, instrumental and locative the five-and-up rule no longer applies: the number and the noun both take the case the sentence needs. The accusative looks like the nominative, except with men.',
       cases: ['gen.pl', 'dat.pl', 'ins.pl', 'loc.pl'],
       casesNote: 'In these cases the noun takes the plural of the case the sentence needs, whatever the number.',

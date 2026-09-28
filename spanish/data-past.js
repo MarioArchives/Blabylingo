@@ -9,7 +9,7 @@ const PAST_TENSE = {
 
   groups: [
     {
-      id: 'past-indef-reg', pl: 'Indefinido', en: 'Preterite, regular', q: 'hablar → hablé, comer → comí',
+      id: 'past-indef-reg', pl: 'Indefinido', short: 'Indef.', en: 'Preterite, regular', q: 'hablar → hablé, comer → comí',
       summary: 'The pretérito indefinido reports a finished action at a definite time: ayer, la semana pasada, en 2010, and in Latin America also hoy and esta mañana. Regular -ar verbs take -é, -aste, -ó, -amos, -aron; -er and -ir verbs share one set: -í, -iste, -ió, -imos, -ieron.',
       tables: [
         { title: 'hablar, comer, vivir: the two sets of endings',
@@ -61,7 +61,7 @@ const PAST_TENSE = {
       ],
     },
     {
-      id: 'past-indef-irr', pl: 'Irregulares', en: 'Preterite, irregular', q: 'ir → fui, tener → tuve',
+      id: 'past-indef-irr', pl: 'Irregulares', short: 'Irreg.', en: 'Preterite, irregular', q: 'ir → fui, tener → tuve',
       summary: 'A dozen very common verbs build the indefinido on a new stem with unstressed endings and no accents: tuve, hice, pude. Ser and ir share one set of forms, and a few spelling and vowel changes touch only some persons.',
       tables: [
         { title: 'ser and ir, dar, ver',
@@ -133,7 +133,7 @@ const PAST_TENSE = {
       ],
     },
     {
-      id: 'past-imperf', pl: 'Imperfecto', en: 'Imperfect', q: 'hablar → hablaba, ser → era',
+      id: 'past-imperf', pl: 'Imperfecto', short: 'Imperf.', en: 'Imperfect', q: 'hablar → hablaba, ser → era',
       summary: 'The imperfecto describes how things were: habits, background, age, time, weather and actions in progress with no end in view. -ar verbs take -aba, -er and -ir verbs take -ía. Only ser, ir and ver are irregular.',
       tables: [
         { title: 'hablar, comer, vivir',
@@ -181,7 +181,7 @@ const PAST_TENSE = {
       ],
     },
     {
-      id: 'past-perf', pl: 'Perfecto', en: 'Present perfect', q: 'he hablado, has comido',
+      id: 'past-perf', pl: 'Perfecto', short: 'Perf.', en: 'Present perfect', q: 'he hablado, has comido',
       summary: 'The pretérito perfecto is he, has, ha, hemos, han plus the participle in -ado or -ido. In Latin America it is used for life experience and for things still open or not yet done: alguna vez, nunca, ya, todavía no, últimamente, hasta ahora. A finished event, even one from today, goes in the indefinido.',
       tables: [
         { title: 'haber + participle',
@@ -237,7 +237,7 @@ const PAST_TENSE = {
       ],
     },
     {
-      id: 'past-choice', pl: 'Indef. o imperf.', en: 'Preterite or imperfect', q: 'comía cuando llegó',
+      id: 'past-choice', pl: 'Indef. o imperf.', short: '¿Cuál?', en: 'Preterite or imperfect', q: 'comía cuando llegó',
       summary: 'The imperfecto sets the scene and says what was going on; the indefinido tells what happened and moves the story forward. In Latin America this includes finished events from today: hoy me levanté tarde. Signal words help: ayer, hoy, de repente, en 2010 point to the indefinido; siempre, mientras, todos los días point to the imperfecto.',
       tables: [
         { title: 'Two jobs',
@@ -274,7 +274,7 @@ const PAST_TENSE = {
       ],
     },
     {
-      id: 'past-pluscuam', pl: 'Pluscuamperfecto', en: 'Past perfect', q: 'había hablado',
+      id: 'past-pluscuam', pl: 'Pluscuamperfecto', short: 'Plusc.', en: 'Past perfect', q: 'había hablado',
       summary: 'The pluscuamperfecto is the imperfecto of haber (había, habías, había, habíamos, habían) plus the participle. It puts one past action before another past action: cuando llegué, ya se habían ido.',
       tables: [
         { title: 'haber in the imperfecto + participle',

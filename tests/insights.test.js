@@ -151,6 +151,19 @@ test('groupScores: mastered means streak ≥ 2 and the share is clamped to 1', (
   assert.equal(scores.find(s => s.id === 'gen').mastered, 0);
 });
 
+test('groupScores: correct counts sentences answered right at least once, even without a streak', () => {
+  const scores = I.groupScores(casesSummary, {
+    'cases|gen|a|w1': rec(3, 1, 0, 0, 1),    // right once, then wrong
+    'cases|gen|b|w2': rec(2, 2, 2, 1, 1),    // mastered, so also correct
+    'cases|gen|c|w3': rec(2, 0, 0, 0, 1),    // never right
+  });
+  const gen = scores.find(s => s.id === 'gen');
+  assert.equal(gen.correct, 2);
+  assert.equal(gen.mastered, 1);
+  near(gen.correctShare, 2 / 10);
+  assert.equal(scores.find(s => s.id === 'voc').correctShare, 0);
+});
+
 /* ---------- topicSummary ---------- */
 
 test('topicSummary: totals every sentence per group in data order, first gloss wins, glosses only for words in the items', () => {
@@ -242,9 +255,77 @@ test('radarSVG: escapes group names and labels every group with its percentage',
   assert.match(svg, /role="img"/);
   const aria = svg.match(/aria-label="([^"]*)"/)[1];
   assert.ok(aria.includes('Cases'));
-  assert.ok(aria.includes('Dopełniacz 10%'));
-  assert.ok(aria.includes('Wołacz 20%'));
-  assert.ok(aria.includes('&lt;B&gt; &quot;c&quot; 0%'));
+  assert.ok(aria.includes('Dopełniacz 10% mastered'));
+  assert.ok(aria.includes('Wołacz 20% mastered'));
+  assert.ok(aria.includes('&lt;B&gt; &quot;c&quot; 0% mastered'));
+});
+
+test('radarSVG: draws a correct-answers shape behind the mastered one, never inside it', () => {
+  const scores = scoresOf(['A', 'B', 'C']).map((s, i) => ({ ...s, correct: 5, correctShare: i === 2 ? 0 : 0.5 }));
+  const svg = I.radarSVG(scores, { label: 'Cases' });
+  assert.equal((svg.match(/class="radar-shape-correct"/g) || []).length, 1);
+  assert.ok(svg.indexOf('radar-shape-correct') < svg.indexOf('class="radar-shape"'));
+  const aria = svg.match(/aria-label="([^"]*)"/)[1];
+  assert.ok(aria.includes('C 20% mastered, 20% answered right'));   // correct share lifted to the mastered one
+  assert.ok(aria.includes('B 10% mastered, 50% answered right'));
+});
+
+test('radarScale: the smallest step that fits, never below 10% or above 100%', () => {
+  assert.equal(I.radarScale(0), 0.1);
+  assert.equal(I.radarScale(0.1), 0.1);
+  assert.equal(I.radarScale(0.11), 0.25);
+  assert.equal(I.radarScale(0.3), 0.5);
+  assert.equal(I.radarScale(0.9), 1);
+  assert.equal(I.radarScale(1), 1);
+});
+
+test('radarScaleFor: fits the larger of either share across all groups', () => {
+  assert.equal(I.radarScaleFor([]), 0.1);
+  assert.equal(I.radarScaleFor([{ share: 0.02, correctShare: 0.3 }, { share: 0.05, correctShare: 0.08 }]), 0.5);
+  assert.equal(I.radarScaleFor([{ share: NaN, correctShare: undefined }]), 0.1);
+});
+
+test('radarSVG: zooms to the scale and names it for screen readers', () => {
+  const scores = scoresOf(['A', 'B', 'C']).map(s => ({ ...s, share: 0.02, correctShare: 0.05 }));
+  scores[0].correctShare = 0.08;   // best share 8% → outer ring is 10%
+  const svg = I.radarSVG(scores, { label: 'Cases' });
+  assert.match(svg.match(/aria-label="([^"]*)"/)[1], /^Cases, zoomed to 10%/);
+  // the top vertex of the correct shape sits at 8/10 of the radius, not 8/100
+  const top = svg.match(/class="radar-shape-correct" points="([^"]*)"/)[1].split(' ')[0].split(',').map(Number);
+  near(top[0], 0);
+  near(top[1], -80);
+});
+
+test('radarSVG: labels use the short name with the full name as a title, and no group colours', () => {
+  const scores = scoresOf(['Mianownik', 'Dopełniacz', 'Celownik']).map((s, i) => ({ ...s, short: ['Mian.', 'Dop.', 'Cel.'][i], colour: ['nom', 'gen', 'dat'][i] }));
+  const svg = I.radarSVG(scores);
+  assert.match(svg, /<text class="radar-label"[^>]*><title>Dopełniacz<\/title>Dop\.<\/text>/);
+  assert.ok(!svg.includes('--c:'));
+});
+
+test('radarSVG: every chart shares one frame, whatever its group count or names', () => {
+  const a = I.radarSVG(scoresOf(['A', 'B', 'C']));
+  const b = I.radarSVG(scoresOf(['A very long group name', 'Dopełniacz', 'Miejscownik', 'D', 'E', 'F', 'G']));
+  const vb = svg => svg.match(/viewBox="([^"]*)"/)[1];
+  assert.equal(vb(a), vb(b));
+  assert.match(b, /textLength="[\d.]+" lengthAdjust="spacingAndGlyphs"><title>/);
+});
+
+test('data: every radar group has a short name that fits the chart frame (7 characters)', () => {
+  for (const lang of ['polish', 'spanish']) {
+    const ctx = {};
+    vm.createContext(ctx);
+    const dir = path.join(__dirname, '..', lang);
+    for (const f of fs.readdirSync(dir).filter(f => /^data.*\.js$/.test(f))) {
+      vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8').replace(/^const /gm, 'var '), ctx);
+    }
+    const groupLists = Object.entries(ctx).map(([k, v]) => k === 'CASES' ? v : v && v.groups).filter(Array.isArray);
+    assert.ok(groupLists.length > 0, `${lang}: no groups found`);
+    for (const g of groupLists.flat()) {
+      assert.ok(g.short, `${lang} ${g.id}: no short name`);
+      assert.ok([...g.short].length <= 7, `${lang} ${g.id}: '${g.short}' is longer than 7 characters`);
+    }
+  }
 });
 
 /* ---------- accountModel ---------- */
