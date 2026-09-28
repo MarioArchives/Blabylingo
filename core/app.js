@@ -40,6 +40,9 @@
   if (typeof IDIOMS !== 'undefined') TOPICS.push({ ...tenseTopic(IDIOMS), filterLabel: 'Themes to practise', unit: 'theme' });
   TOPICS.forEach(t => { t.byId = Object.fromEntries(t.groups.map(g => [g.id, g])); t.allIds = t.groups.map(g => g.id); });
 
+  // the folder id (e.g. 'polish'), not APP.lang ('pl'): matches the id account.html groups progress by
+  const language = (typeof LANGUAGES !== 'undefined' && LANGUAGES.find(l => l.lang === APP.lang)?.id) || APP.lang;
+
   const store = {
     get(key, fallback) { try { const v = localStorage.getItem(key); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
     set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* private mode */ } },
@@ -92,7 +95,7 @@
   const keyOf = (topic, s) => `${topic.id}|${s.c}|${s.s}|${s.base}`;
   const progress = store.get(`${APP.storagePrefix}.progress`, {});
   const recordOf = s => progress[keyOf(state.topic, s)];
-  const saveProgress = () => store.set(`${APP.storagePrefix}.progress`, progress);
+  const saveProgress = (answered = false) => { store.set(`${APP.storagePrefix}.progress`, progress); window.cloudSync?.(answered); };   // core/sync.js saves it to the account too
 
   function record(item, right) {
     const k = keyOf(state.topic, item);
@@ -102,11 +105,33 @@
     r.last = right ? 1 : 0;
     r.t = Date.now();
     progress[k] = r;
-    saveProgress();
+    saveProgress(true);
+    renderForgotten();
   }
 
   const mastered = r => !!r && r.streak >= 2;    // right twice in a row
   const weak = r => !!r && r.last === 0;
+
+  /* ---------- forgotten words banner: a slim strip listing words often missed across every topic ---------- */
+  const wordGlosses = {};       // base -> first gloss found, across all topics
+  const sentenceOfKey = {};     // progress key -> its sentence, so a chip can show the correct form(s)
+  TOPICS.forEach(t => t.sentences.forEach(s => {
+    if (!(s.base in wordGlosses)) wordGlosses[s.base] = s.gloss;
+    sentenceOfKey[keyOf(t, s)] = s;
+  }));
+
+  function renderForgotten() {
+    const aside = $('#forgotten');
+    if (!aside || typeof INSIGHTS === 'undefined') return;
+    const words = INSIGHTS.forgottenWords(progress, { glosses: wordGlosses });
+    aside.hidden = !words.length;
+    if (!words.length) { aside.innerHTML = ''; return; }
+    aside.innerHTML = `<h2 id="forgotten-title">Words you keep forgetting</h2>
+      <ul class="forgotten-list">${words.map(w => {
+        const forms = [...new Set(w.keys.map(k => sentenceOfKey[k]?.a?.[0]).filter(Boolean))];
+        return `<li class="forgotten-chip" tabindex="0" data-gloss="${esc(forms.join(', '))}"><b lang="${APP.lang}">${esc(w.base)}</b><span>${esc(w.gloss)}</span></li>`;
+      }).join('')}</ul>`;
+  }
 
   function groupStats(items) {
     const out = { total: items.length, seen: 0, mastered: 0, weak: 0, n: 0, ok: 0 };
@@ -1027,7 +1052,7 @@
   function progressPanel() {
     const t = state.topic;
     const all = groupStats(t.sentences);
-    if (!all.seen) return `<section class="progress"><h3>Your progress</h3><p>Nothing yet. Results are saved in this browser as you go.</p></section>`;
+    if (!all.seen) return `<section class="progress"><h3>Your progress</h3><p>Nothing yet. Results are saved in this browser as you go, and to your account when you are signed in.</p></section>`;
     const rows = t.groups.map(g => {
       const s = groupStats(t.sentences.filter(x => x.c === g.id));
       const pct = s.n ? Math.round(100 * s.ok / s.n) : 0;
@@ -1042,7 +1067,7 @@
         <thead><tr><th scope="col">${esc(t.unit[0].toUpperCase() + t.unit.slice(1))}</th><th scope="col"></th><th scope="col">Seen</th><th scope="col">Mastered</th><th scope="col">To review</th><th scope="col">Accuracy</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
-      <p class="progress-note">Mastered means right twice in a row. To review means missed the last time. Everything is saved in this browser only.</p>
+      <p class="progress-note">Mastered means right twice in a row. To review means missed the last time. Everything is saved in this browser, and to your account when you are signed in.</p>
       <p class="progress-reset">${state.confirmReset
         ? `Delete all saved progress for every topic? <button type="button" class="btn wrong" data-action="reset-yes">Yes, delete it</button> <button type="button" class="btn" data-action="reset-no">Keep it</button>`
         : `<button type="button" class="link-btn" data-action="reset">Reset progress</button>`}</p>
@@ -1151,9 +1176,9 @@
     el.hidden = false;
     el.innerHTML = LANGUAGES.map(l => l.lang === APP.lang
       ? `<a aria-current="page" lang="${l.lang}">${esc(l.name)}</a>`
-      : `<a href="../${l.id}/" data-lang="${l.id}" lang="${l.lang}">${esc(l.name)}</a>`).join('');
+      : `<a href="../${l.id}/index.html" data-lang="${l.id}" lang="${l.lang}">${esc(l.name)}</a>`).join('');
   }
-  const updateLanguageLinks = () => document.querySelectorAll('#languages a[data-lang]').forEach(a => { a.href = `../${a.dataset.lang}/${pageHash()}`; });
+  const updateLanguageLinks = () => document.querySelectorAll('#languages a[data-lang]').forEach(a => { a.href = `../${a.dataset.lang}/index.html${pageHash()}`; });
 
   /* ---------- view switching ---------- */
   // Each topic and view is a history entry (#past/quiz, #cases/tables), so the browser's Back and Forward buttons move between them.
@@ -1188,6 +1213,8 @@
     $('#view-quiz').hidden = state.view !== 'quiz';
     hideTip();
     updateLanguageLinks();
+    // shared by every language (no storage prefix): the account page's "back" returns to the page practised last
+    store.set('blabilingo.lastPage', { language, hash: pageHash() });
     if (state.view === 'table') renderTable(); else renderQuiz();
   }
 
@@ -1286,7 +1313,7 @@
     else if (action === 'resume') resumeQuiz();
     else if (action === 'reset') { state.confirmReset = true; renderQuiz(); }
     else if (action === 'reset-no') { state.confirmReset = false; renderQuiz(); }
-    else if (action === 'reset-yes') { Object.keys(progress).forEach(k => delete progress[k]); saveProgress(); store.set(`${APP.storagePrefix}.resume`, null); state.confirmReset = false; renderQuiz(); }
+    else if (action === 'reset-yes') { Object.keys(progress).forEach(k => delete progress[k]); saveProgress(); store.set(`${APP.storagePrefix}.resume`, null); state.confirmReset = false; renderQuiz(); renderForgotten(); }
     else if (action === 'next') next();
     else if (action === 'mark-right') selfMark(true);
     else if (action === 'mark-wrong') selfMark(false);
@@ -1335,9 +1362,20 @@
   ({ topic: state.topic, view: state.view } = readHash());   // a link to a page wins over where you left off
   // an unfinished quiz survives a reload: carry on from the same sentence instead of showing the start screen
   if (state.view === 'quiz') state.quiz = savedQuiz();
+  // core/sync.js merges a signed-in account's progress into this browser's, then redraws
+  window.blabilingo = {
+    progress,
+    topics: TOPICS.map(t => t.id),
+    saveLocal: () => store.set(`${APP.storagePrefix}.progress`, progress),
+    refresh: () => { renderForgotten(); if (!state.quiz) renderView(); },   // the banner is safe to redraw; never redraw under a question being answered
+    // topic/group names, colours and glosses to save alongside progress; omitted if insights.js failed to load
+    ...(typeof INSIGHTS !== 'undefined' ? { summary: (topicId, items) => INSIGHTS.topicSummary(TOPICS.find(t => t.id === topicId), language, items) } : {}),
+  };
+
   history.replaceState(null, '', pageHash());
   renderLanguages();
   renderTopics();
   renderFilter();
   renderView();
+  renderForgotten();
 })();

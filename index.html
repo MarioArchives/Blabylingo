@@ -20,6 +20,7 @@
 </head>
 <body>
 <header class="masthead">
+  <div class="masthead-bar"><div id="account" class="account"></div></div>
   <h1>Blabilingo</h1>
   <p class="lede">Practise the endings that make a language hard. Pick one, study the tables, then test yourself on real sentences.</p>
 </header>
@@ -29,7 +30,17 @@
 <script src="languages.js"></script>
 <script>
   document.getElementById('choose').innerHTML = LANGUAGES.map(l => `
-    <a href="${l.id}/"><b lang="${l.lang}">${l.name}</b><i lang="${l.lang}">${l.app}</i><span>${l.en}. ${l.about}</span></a>`).join('');
+    <a href="${l.id}/index.html"><b lang="${l.lang}">${l.name}</b><i lang="${l.lang}">${l.app}</i><span>${l.en}. ${l.about}</span></a>`).join('');
+</script>
+<script type="module">
+  import { onUser, ensureProfile, nameOf } from './core/cloud.js';
+  const box = document.getElementById('account');
+  const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  onUser(async user => {
+    if (!user) { box.innerHTML = '<a href="signin.html">Sign in</a>'; return; }
+    const profile = await ensureProfile(user).catch(() => ({}));
+    box.innerHTML = `<a href="account.html">${esc(nameOf(profile, user))}</a>`;
+  });
 </script>
 </body>
 </html>

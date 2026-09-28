@@ -15,6 +15,7 @@ Open `index.html` to pick a language, or open a language folder's `index.html` d
 
 - `core/app.js` is the engine: topic switch, filter, tables, quiz, progress and history. Every language uses it unchanged.
 - `core/styles.css` is the shared design.
+- `core/insights.js` turns saved progress into the forgotten-words banner, the account page's numbers and its radar charts. Its tests run from the repo root with `node --test tests/` (Node's built-in runner, nothing to install).
 - `core/validate.js` checks any tense or numbers data file. Run it from a language folder: `node ../core/validate.js data-past.js PAST_TENSE`.
 - `languages.js` lists the languages for the chooser and the language switch.
 - `<language>/` holds everything that belongs to that language: `config.js` (voice, on-screen letters, accent handling, storage prefix), the `data-*.js` files, `index.html` (title, favicon and which data files to load) and validators for checks only that language needs. Each folder has its own README on writing content.
@@ -32,3 +33,5 @@ The engine shows a topic only when its data file is loaded, so a language offers
 GitHub Pages serves the repo as it is: Settings → Pages → Deploy from branch → `master`, root folder. `.nojekyll` keeps Pages from processing the files.
 
 Progress is saved in the browser under each language's own storage prefix. GitHub Pages serves all of one account's project sites from the same origin, so progress saved on the old Polish and Spanish sites carries over.
+
+Signed-in learners (Google, through Firebase: `firebase-config.js`, `core/cloud.js`, `core/sync.js`) also keep it in their account, which `account.html` shows. Accounts need the site served over http, so they are off when a page is opened as a file.

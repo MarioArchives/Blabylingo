@@ -12,7 +12,10 @@
 </head>
 <body>
 <header class="masthead">
-  <nav id="languages" class="languages" aria-label="Language" hidden></nav>
+  <div class="masthead-bar">
+    <nav id="languages" class="languages" aria-label="Language" hidden></nav>
+    <div id="account" class="account"></div>
+  </div>
   <h1 lang="es">Terminaciones</h1>
   <p class="lede">Practise Spanish present, past and future tenses. Pick what you want to work on, study the tables, then test yourself on real sentences.</p>
   <div id="topics" class="topics" role="group" aria-label="Topic" hidden></div>
@@ -35,6 +38,7 @@
 </nav>
 
 <main>
+  <aside id="forgotten" class="forgotten" aria-labelledby="forgotten-title" hidden></aside>
   <section id="view-table" hidden></section>
   <section id="view-quiz" hidden></section>
 </main>
@@ -48,6 +52,8 @@
 <script src="data-future.js"></script>
 <script src="data-numbers.js"></script>
 <script src="data-idioms.js"></script>
+<script src="../core/insights.js"></script>
 <script src="../core/app.js"></script>
+<script type="module" src="../core/sync.js"></script>
 </body>
 </html>

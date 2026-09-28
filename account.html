@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your account – Blabilingo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bona+Nova:ital,wght@0,400;0,700;1,400&family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Cpath fill='%23C1121F' d='M0 0h2v2H0z'/%3E%3Cpath fill='%231D5FBF' d='M2 0h2v2H2z'/%3E%3Cpath fill='%23FFD23F' d='M0 2h2v2H0z'/%3E%3Cpath fill='%231B7A43' d='M2 2h2v2H2z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="core/styles.css">
+<link rel="stylesheet" href="core/account.css">
+</head>
+<body>
+<header class="masthead">
+  <div class="masthead-bar"><nav class="languages" aria-label="Site"><a href="./" id="back">← Blabilingo</a></nav></div>
+  <h1>Your account</h1>
+</header>
+<main>
+  <section id="account-page" class="account-page" aria-live="polite">
+    <p class="account-note">Loading…</p>
+  </section>
+</main>
+<div id="radar-tip" class="radar-tip" role="tooltip" hidden></div>
+<script>
+  if (location.protocol === 'file:') document.getElementById('account-page').innerHTML =
+    '<p class="account-note">Accounts need the site served over http. Run <code>./serve-for-phone.sh</code> and open <code>http://localhost:8000/account.html</code>.</p>';
+</script>
+<script src="languages.js"></script>
+<script>
+  // Back to the language page practised last (core/app.js remembers it), or the language chooser
+  const lastPage = (() => {
+    try {
+      const p = JSON.parse(localStorage.getItem('blabilingo.lastPage'));
+      const l = p && LANGUAGES.find(x => x.id === p.language);
+      const hash = typeof p?.hash === 'string' && /^#[\w-]+\/[\w-]+$/.test(p.hash) ? p.hash : '';
+      return l ? { id: l.id, href: `${l.id}/index.html${hash}`, name: l.app } : null;
+    } catch { return null; }
+  })();
+  if (lastPage) { const back = document.getElementById('back'); back.href = lastPage.href; back.textContent = `← ${lastPage.name}`; }
+</script>
+<script src="core/insights.js"></script>
+<script type="module">
+  import { currentUser, ensureProfile, nameOf, signOutUser, db, collection, getDocs } from './core/cloud.js';
+
+  const box = document.getElementById('account-page');
+  const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const dayOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const pct = a => a == null ? '–' : `${Math.round(a * 100)}%`;
+  const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const joinAnd = list => list.length <= 1 ? (list[0] || '') :
+    list.length === 2 ? `${list[0]} and ${list[1]}` : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
+
+  // ---- pure rendering helpers: build markup strings from the account model, nothing else ----
+
+  function avatar(name) {
+    const initial = (name || '').trim().charAt(0).toUpperCase() || '?';
+    return `<div class="avatar" aria-hidden="true">${esc(initial)}</div>`;
+  }
+
+  function identityBlock(name, profile, langIds) {
+    const names = langIds.map(id => (LANGUAGES.find(l => l.id === id) || {}).en).filter(Boolean);
+    const practising = names.length ? `Practising ${joinAnd(names)}` : '';
+    const created = profile.createdAt && typeof profile.createdAt.toDate === 'function' ? profile.createdAt.toDate() : null;
+    const since = created ? `since ${created.toLocaleString('en-US', { month: 'long', year: 'numeric' })}` : '';
+    const line = [practising, since].filter(Boolean).join(' · ');
+    return `<div class="identity">
+      ${avatar(name)}
+      <div>
+        <p class="identity-name">${esc(name)}</p>
+        ${line ? `<p class="identity-line">${esc(line)}</p>` : ''}
+      </div>
+    </div>`;
+  }
+
+  const statTile = (value, label) => `<div class="stat-tile"><span class="stat-num">${esc(value)}</span><span class="stat-label">${esc(label)}</span></div>`;
+
+  // A streak counts answers in any language, so it sits above the language switch
+  const streakTiles = (streak, bestStreak) => `<div class="stat-tiles">
+    ${statTile(streak, 'days in a row')}
+    ${statTile(bestStreak, 'best streak')}
+  </div>`;
+
+  const practiceTiles = totals => `<div class="stat-tiles">
+    ${statTile(totals.answered, 'questions answered')}
+    ${statTile(pct(totals.accuracy), 'accuracy')}
+  </div>`;
+
+  const forgottenChip = (w, lang) => `<li class="forgotten-chip">
+      <span class="fw-word" lang="${esc(lang)}">${esc(w.base)}</span>
+      ${w.gloss ? `<span class="fw-gloss">${esc(w.gloss)}</span>` : ''}
+    </li>`;
+
+  function forgottenSection(words, lang) {
+    const body = words.length
+      ? `<ul class="forgotten-list">${words.map(w => forgottenChip(w, lang)).join('')}</ul>`
+      : '<p class="account-note">Nothing forgotten yet — keep practising and this fills up.</p>';
+    return `<section class="forgotten"><h2>Often forgotten</h2>${body}</section>`;
+  }
+
+  function groupTable(scores, visible) {
+    const rows = scores.map(s => `<tr>
+      <th scope="row">${esc(s.pl)} <i>${esc(s.en)}</i></th>
+      <td>${s.mastered} of ${s.total}</td>
+      <td>${pct(s.accuracy)}</td>
+    </tr>`).join('');
+    // hidden for sighted readers via a wrapper: a table ignores the 1px box that .sr-only relies on
+    const table = `<table class="radar-table">
+      <caption class="sr-only">Group scores</caption>
+      <thead><tr><th scope="col">Group</th><th scope="col">Mastered</th><th scope="col">Accuracy</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+    return visible ? table : `<div class="sr-only">${table}</div>`;
+  }
+
+  function topicCard(langInfo, langId, topic) {
+    if (topic.stale) return `<article class="radar-card radar-card-stale">
+      <h3>${esc(capitalize(topic.id))}</h3>
+      <p class="account-note">Open ${esc(langInfo.en)} once to update this chart.</p>
+      <p><a class="link-btn" href="${esc(langId)}/index.html#${esc(topic.id)}/quiz">Open ${esc(langInfo.en)}</a></p>
+    </article>`;
+    const { summary, scores } = topic;
+    const mastered = scores.reduce((sum, s) => sum + s.mastered, 0);
+    const total = scores.reduce((sum, s) => sum + s.total, 0);
+    const svg = INSIGHTS.radarSVG(scores, { label: summary.topic.en });
+    return `<article class="radar-card">
+      <h3>${esc(summary.topic.en)} <span class="radar-subtitle">${esc(summary.topic.pl)}</span></h3>
+      ${svg}
+      <p class="radar-caption">${mastered} of ${total} sentences mastered</p>
+      ${groupTable(scores, !svg)}
+    </article>`;
+  }
+
+  const langInfo = id => LANGUAGES.find(l => l.id === id) || { id, lang: '', name: id, app: '', en: id };
+
+  function languagePanel(entry, tabbed, selected) {
+    const info = langInfo(entry.id);
+    const tabAttrs = tabbed ? ` role="tabpanel" id="panel-${esc(entry.id)}" aria-labelledby="tab-${esc(entry.id)}"${selected ? '' : ' hidden'}` : '';
+    return `<section class="lang-section"${tabAttrs}>
+      ${practiceTiles(entry.totals)}
+      ${forgottenSection(entry.forgotten, info.lang)}
+      <div class="lang-head">
+        <h2><span lang="${esc(info.lang)}">${esc(info.app)}</span></h2>
+        <a class="link-btn" href="${esc(entry.id)}/index.html">Practise ${esc(info.en)}</a>
+      </div>
+      <div class="radar-grid">${entry.topics.map(t => topicCard(info, entry.id, t)).join('')}</div>
+    </section>`;
+  }
+
+  // Tabs only when there is more than one language to switch between
+  function languageTabs(languages, selectedId) {
+    if (languages.length < 2) return '';
+    return `<div class="lang-tabs" role="tablist" aria-label="Language">${languages.map(l => {
+      const info = langInfo(l.id), on = l.id === selectedId;
+      return `<button type="button" role="tab" class="lang-tab" id="tab-${esc(l.id)}" aria-controls="panel-${esc(l.id)}" aria-selected="${on}" tabindex="${on ? 0 : -1}" data-lang="${esc(l.id)}" lang="${esc(info.lang)}">${esc(info.name)}</button>`;
+    }).join('')}</div>`;
+  }
+
+  function emptyProgress() {
+    const links = LANGUAGES.map(l => `<a href="${esc(l.id)}/index.html">${esc(l.name)}</a>`).join(' or ');
+    return `<p class="account-note">You haven't practised yet — jump into ${links} to get started.</p>`;
+  }
+
+  function progressBlock(model, progressError, selectedId) {
+    if (progressError) return '<p class="account-note">Your practice history could not be loaded right now. Try reloading the page.</p>';
+    if (!model.languages.length) return emptyProgress();
+    const tabbed = model.languages.length > 1;
+    return languageTabs(model.languages, selectedId)
+      + model.languages.map(l => languagePanel(l, tabbed, l.id === selectedId)).join('');
+  }
+
+  // The chosen language is a per-browser convenience, so it lives in localStorage
+  const SAVED_LANG = 'blabilingo.accountLanguage';
+  const savedLanguage = () => { try { return localStorage.getItem(SAVED_LANG); } catch { return null; } };
+  const saveLanguage = id => { try { localStorage.setItem(SAVED_LANG, id); } catch { /* private mode */ } };
+
+  function selectLanguage(id, focus) {
+    box.querySelectorAll('.lang-tab').forEach(tab => {
+      const on = tab.dataset.lang === id;
+      tab.setAttribute('aria-selected', on);
+      tab.tabIndex = on ? 0 : -1;
+      if (on && focus) tab.focus();
+    });
+    box.querySelectorAll('.lang-section[role="tabpanel"]').forEach(panel => { panel.hidden = panel.id !== `panel-${id}`; });
+    hideTip();
+    saveLanguage(id);
+  }
+  box.addEventListener('click', e => { const tab = e.target.closest('.lang-tab'); if (tab) selectLanguage(tab.dataset.lang); });
+  // Arrow keys move between tabs, as in any tab list
+  box.addEventListener('keydown', e => {
+    const tab = e.target.closest('.lang-tab');
+    if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    const tabs = [...box.querySelectorAll('.lang-tab')], i = tabs.indexOf(tab);
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    e.preventDefault();
+    selectLanguage(tabs[next].dataset.lang, true);
+  });
+
+  // ---- tooltip: one element for the page, shown via delegated pointer/focus events ----
+
+  const tip = document.getElementById('radar-tip');
+  function showTip(target) {
+    const text = target.getAttribute('data-tip');
+    if (!text) return;
+    tip.textContent = text;
+    tip.hidden = false;
+    const r = target.getBoundingClientRect();
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = r.left + r.width / 2 - w / 2;
+    let y = r.top - h - 8;
+    if (y < 4) y = r.bottom + 8;
+    x = Math.max(4, Math.min(x, innerWidth - w - 4));
+    tip.style.left = `${x}px`;
+    tip.style.top = `${y}px`;
+  }
+  const hideTip = () => { tip.hidden = true; };
+  // pointerenter/focus do not bubble, but capture-phase listeners still see them on the way down
+  document.addEventListener('pointerenter', e => { const p = e.target.closest?.('.radar-point'); if (p) showTip(p); }, true);
+  document.addEventListener('pointerleave', e => { if (e.target.closest?.('.radar-point')) hideTip(); }, true);
+  document.addEventListener('focus', e => { const p = e.target.closest?.('.radar-point'); if (p) showTip(p); }, true);
+  document.addEventListener('blur', () => hideTip(), true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
+
+  // ---- page ----
+
+  const user = await currentUser();
+  if (!user) location.replace(`signin.html?next=${encodeURIComponent(location.pathname)}`);
+  else {
+    const today = dayOf(new Date());
+    const [profileResult, docsResult] = await Promise.allSettled([
+      ensureProfile(user),
+      getDocs(collection(db, 'users', user.uid, 'progress')),
+    ]);
+    if (profileResult.status === 'rejected') console.warn('Could not load your account', profileResult.reason);
+    const profile = profileResult.status === 'fulfilled' ? profileResult.value : {};
+
+    const progressError = docsResult.status === 'rejected';
+    if (progressError) console.warn('Could not load your practice history', docsResult.reason);
+    const docs = progressError ? [] : docsResult.value.docs.map(d => ({ id: d.id, data: d.data() }));
+    const model = INSIGHTS.accountModel(docs, { languages: LANGUAGES });
+
+    const name = nameOf(profile, user);
+    const langIds = (profile.languages && profile.languages.length) ? profile.languages : model.languages.map(l => l.id);
+    const streak = INSIGHTS.currentStreak(profile, today);
+    // the tab picked last time, else the language practised last, else the first
+    const selectedId = [savedLanguage(), lastPage?.id].find(id => model.languages.some(l => l.id === id)) || model.languages[0]?.id;
+
+    box.innerHTML = `
+      ${identityBlock(name, profile, langIds)}
+      ${streakTiles(streak, profile.bestStreak || 0)}
+      ${progressBlock(model, progressError, selectedId)}
+      <p class="account-links"><a class="btn primary" href="${esc(lastPage ? lastPage.href : './')}">Practise</a> <button type="button" class="btn" id="sign-out">Sign out</button></p>`;
+
+    box.querySelector('#sign-out').addEventListener('click', async () => {
+      await signOutUser();
+      location.replace('./');
+    });
+  }
+</script>
+</body>
+</html>
