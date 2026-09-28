@@ -24,7 +24,8 @@ export const onUser = callback => onAuthStateChanged(auth, callback);
 // Signing in for the first time creates the account: Firebase Auth adds the user and we add their profile.
 export async function signInWithGoogle() {
   const { user } = await signInWithPopup(auth, new GoogleAuthProvider());
-  await ensureProfile(user);
+  // Signing in has worked at this point; a database problem shows on the account page instead of blocking it
+  await ensureProfile(user).catch(err => console.warn('Signed in, but saving your profile failed', err));
   return user;
 }
 export const signOutUser = () => signOut(auth);

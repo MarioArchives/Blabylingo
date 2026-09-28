@@ -808,7 +808,7 @@
     scrollToQuiz();
   }
 
-  const scrollToQuiz = () => window.scrollTo({ top: $('nav').offsetTop - 8, behavior: 'instant' });
+  const scrollToQuiz = () => window.scrollTo({ top: $('#view-quiz').getBoundingClientRect().top + window.scrollY - 8, behavior: 'instant' });
   const current = () => state.quiz.queue[state.quiz.idx];
   const isNotebook = () => state.mode === 'notebook';
 
