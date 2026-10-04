@@ -105,7 +105,7 @@
     r.last = right ? 1 : 0;
     r.t = Date.now();
     progress[k] = r;
-    saveProgress(true);
+    saveProgress({ right, mastered: right && r.streak === 2 });   // core/sync.js counts these for the leaderboards
     renderForgotten();
   }
 

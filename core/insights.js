@@ -124,6 +124,44 @@ const INSIGHTS = (() => {
     });
   };
 
+  // Weekly leaderboards reset on Monday
+  const weekStartOf = day => {
+    let d = day;
+    for (let i = (new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7; i > 0; i--) d = previousDay(d);
+    return d;
+  };
+
+  // Leaderboards from every learner's leaderboard/{uid} document (core/sync.js writes them):
+  //   { name, hidden, right: { polish: n }, mastered: { polish: n }, rightDays: { day: { polish: n } }, masteredDays: { … } }
+  // metric 'right' ranks right answers, 'mastered' sentences mastered; each period lists the top `limit`,
+  // plus the viewer's own row (uid) with its real rank when it falls below the top. Equal scores share a rank.
+  const leaderboards = (docs, { today, metric = 'right', uid = null, limit = 10 } = {}) => {
+    const sum = byLang => byLang && typeof byLang === 'object'
+      ? Object.values(byLang).reduce((s, n) => s + (Number.isFinite(n) && n > 0 ? n : 0), 0) : 0;
+    const week = [today];
+    for (const monday = weekStartOf(today); week[0] !== monday;) week.unshift(previousDay(week[0]));
+    const learners = (docs || []).filter(d => d && d.data && !d.data.hidden).map(({ id, data }) => {
+      const days = data[`${metric}Days`] || {};
+      return {
+        uid: id,
+        name: String(data.name || '').trim() || 'A learner',
+        day: sum(days[today]),
+        week: week.reduce((s, d) => s + sum(days[d]), 0),
+        all: sum(data[metric]),
+      };
+    });
+    const rank = period => {
+      const sorted = learners.filter(l => l[period] > 0)
+        .sort((a, b) => b[period] - a[period] || a.name.localeCompare(b.name) || (a.uid < b.uid ? -1 : 1));
+      const rows = sorted.map(l => ({ uid: l.uid, name: l.name, score: l[period], rank: 0, you: l.uid === uid }));
+      rows.forEach((r, i) => { r.rank = i && r.score === rows[i - 1].score ? rows[i - 1].rank : i + 1; });
+      const top = rows.slice(0, limit);
+      const mine = rows.find(r => r.you);
+      return mine && !top.includes(mine) ? [...top, mine] : top;
+    };
+    return { day: rank('day'), week: rank('week'), all: rank('all') };
+  };
+
   const totals = items => {
     let answered = 0, right = 0;
     for (const r of Object.values(items || {})) {
@@ -346,6 +384,8 @@ const INSIGHTS = (() => {
     previousDay,
     currentStreak,
     weekActivity,
+    weekStartOf,
+    leaderboards,
     totals,
     radarPoints,
     radarLeague,

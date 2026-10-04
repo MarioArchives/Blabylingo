@@ -665,6 +665,93 @@ test('weekActivity: streak days with no logged answers stay marked (logging star
   assert.equal(week[6].count, 6); assert.equal(week[6].streak, true);
 });
 
+/* ---------- leaderboards ---------- */
+
+test('weekStartOf: weeks start on Monday', () => {
+  assert.equal(I.weekStartOf('2026-10-04'), '2026-09-28');   // Sunday → the Monday before
+  assert.equal(I.weekStartOf('2026-09-28'), '2026-09-28');   // Monday → itself
+  assert.equal(I.weekStartOf('2026-10-01'), '2026-09-28');   // Thursday
+  assert.equal(I.weekStartOf('2027-01-01'), '2026-12-28');   // across the year
+});
+
+const board = (id, data) => ({ id, data });
+const TODAY = '2026-10-01';   // a Thursday; the week began on Monday 2026-09-28
+
+test('leaderboards: right answers today, this week and all time, adding up every language', () => {
+  const docs = [
+    board('a', { name: 'Ana', right: { polish: 50, spanish: 30 }, rightDays: { [TODAY]: { polish: 4, spanish: 3 }, '2026-09-29': { polish: 10 } } }),
+    board('b', { name: 'Bo', right: { polish: 60 }, rightDays: { [TODAY]: { polish: 9 }, '2026-09-27': { polish: 40 } } }),   // Sunday: last week
+  ];
+  const r = I.leaderboards(docs, { today: TODAY, metric: 'right' });
+  assert.deepEqual(r.day.map(x => [x.name, x.score]), [['Bo', 9], ['Ana', 7]]);
+  assert.deepEqual(r.week.map(x => [x.name, x.score]), [['Ana', 17], ['Bo', 9]]);
+  assert.deepEqual(r.all.map(x => [x.name, x.score]), [['Ana', 80], ['Bo', 60]]);
+});
+
+test('leaderboards: mastered uses the masteredDays log and the mastered totals', () => {
+  const docs = [
+    board('a', { name: 'Ana', mastered: { polish: 12 }, masteredDays: { [TODAY]: { polish: 2 } } }),
+    board('b', { name: 'Bo', mastered: { polish: 5, spanish: 9 }, masteredDays: { '2026-09-28': { spanish: 3 } } }),
+  ];
+  const r = I.leaderboards(docs, { today: TODAY, metric: 'mastered' });
+  assert.deepEqual(r.day.map(x => [x.name, x.score]), [['Ana', 2]]);
+  assert.deepEqual(r.week.map(x => [x.name, x.score]), [['Bo', 3], ['Ana', 2]]);
+  assert.deepEqual(r.all.map(x => [x.name, x.score]), [['Bo', 14], ['Ana', 12]]);
+});
+
+test('leaderboards: days after today do not count', () => {
+  const docs = [board('a', { name: 'Ana', rightDays: { '2026-10-02': { polish: 99 }, [TODAY]: { polish: 1 } } })];
+  const r = I.leaderboards(docs, { today: TODAY, metric: 'right' });
+  assert.equal(r.week[0].score, 1);
+  assert.equal(r.day[0].score, 1);
+});
+
+test('leaderboards: hidden learners and zero scores are left out', () => {
+  const docs = [
+    board('a', { name: 'Ana', hidden: true, right: { polish: 100 } }),
+    board('b', { name: 'Bo', right: { polish: 0 } }),
+    board('c', { name: 'Cy', right: { polish: 3 } }),
+  ];
+  const r = I.leaderboards(docs, { today: TODAY, metric: 'right' });
+  assert.deepEqual(r.all.map(x => x.name), ['Cy']);
+  assert.deepEqual(r.day, []);
+});
+
+test('leaderboards: equal scores share a rank (1, 1, 3), ties listed by name', () => {
+  const docs = ['Cy', 'Ana', 'Bo'].map((name, i) => board(`u${i}`, { name, right: { polish: name === 'Bo' ? 5 : 8 } }));
+  const r = I.leaderboards(docs, { today: TODAY, metric: 'right' });
+  assert.deepEqual(r.all.map(x => [x.rank, x.name]), [[1, 'Ana'], [1, 'Cy'], [3, 'Bo']]);
+});
+
+test('leaderboards: top 10, plus your own row with its real rank when you are further down', () => {
+  const docs = Array.from({ length: 14 }, (_, i) => board(`u${i}`, { name: `L${String(i).padStart(2, '0')}`, right: { polish: 100 - i } }));
+  const r = I.leaderboards(docs, { today: TODAY, metric: 'right', uid: 'u12' });
+  assert.equal(r.all.length, 11);
+  assert.deepEqual(r.all.slice(0, 10).map(x => x.rank), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.deepEqual([r.all[10].rank, r.all[10].name, r.all[10].you], [13, 'L12', true]);
+  const top = I.leaderboards(docs, { today: TODAY, metric: 'right', uid: 'u3' });
+  assert.equal(top.all.length, 10);
+  assert.equal(top.all.find(x => x.you).rank, 4);
+  assert.equal(top.all.filter(x => x.you).length, 1);
+});
+
+test('leaderboards: a learner without a name shows as "A learner"; bad numbers count as 0', () => {
+  const docs = [
+    board('a', { right: { polish: 4 } }),
+    board('b', { name: '   ', right: { polish: 'x', spanish: 2 } }),
+    board('c', { name: 'Cy', right: { polish: NaN }, rightDays: { [TODAY]: null } }),
+    board('d', null),
+  ];
+  const r = I.leaderboards(docs, { today: TODAY, metric: 'right' });
+  deepNoNaN(r);
+  assert.deepEqual(r.all.map(x => [x.name, x.score]), [['A learner', 4], ['A learner', 2]]);
+});
+
+test('leaderboards: no documents gives three empty lists', () => {
+  assert.deepEqual(I.leaderboards([], { today: TODAY, metric: 'right' }), { day: [], week: [], all: [] });
+  assert.deepEqual(I.leaderboards(null, { today: TODAY, metric: 'mastered' }), { day: [], week: [], all: [] });
+});
+
 /* ---------- regression ---------- */
 
 test('insights.js is a plain script: no import/export, defines INSIGHTS as a global', () => {

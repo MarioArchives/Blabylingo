@@ -17,6 +17,7 @@ const language = (typeof LANGUAGES !== 'undefined' && LANGUAGES.find(l => l.lang
 let uid = null;
 let timer = null;
 let activeDay = null;                 // the day this page last marked on the profile
+let profile = null;                   // the signed-in learner's profile: nickname and leaderboard choice
 
 const docId = topic => `${APP.storagePrefix}-${topic}`;
 const topicOf = key => key.split('|')[0];
@@ -84,6 +85,44 @@ const readPending = () => { try { return JSON.parse(localStorage.getItem(PENDING
 const writePending = p => { try { localStorage.setItem(PENDING, JSON.stringify(p)); } catch { /* private mode */ } };
 const countAnswer = () => { const p = readPending(), day = dayOf(new Date()); p[day] = (p[day] || 0) + 1; writePending(p); };
 
+// Leaderboards: right answers and newly mastered sentences per day, counted the same way and added to
+// leaderboard/{uid} together with this language's all-time totals. Nothing is sent while the learner is off the board.
+const BOARD = `${APP.storagePrefix}.pendingBoard`;
+const readBoard = () => { try { return JSON.parse(localStorage.getItem(BOARD)) || {}; } catch { return {}; } };
+const writeBoard = p => { try { localStorage.setItem(BOARD, JSON.stringify(p)); } catch { /* private mode */ } };
+function countForBoard({ right, mastered }) {
+  if (!right) return;
+  const p = readBoard(), day = dayOf(new Date()), d = p[day] || (p[day] = { right: 0, mastered: 0 });
+  d.right += 1;
+  if (mastered) d.mastered += 1;
+  writeBoard(p);
+}
+
+async function pushBoard() {
+  if (!uid) return;
+  if (profile?.leaderboardHidden) { writeBoard({}); return; }
+  const records = Object.values(K.progress).filter(r => r && Number.isFinite(r.ok));
+  const sent = readBoard();
+  const daysOf = field => Object.fromEntries(Object.entries(sent).filter(([, d]) => d[field] > 0).map(([day, d]) => [day, { [language]: increment(d[field]) }]));
+  const uidNow = uid;
+  await setDoc(doc(db, 'leaderboard', uidNow), {
+    name: profile?.nicknameChosen ? profile.username || '' : '',
+    right: { [language]: records.reduce((sum, r) => sum + r.ok, 0) },
+    mastered: { [language]: records.filter(r => r.streak >= 2).length },
+    rightDays: daysOf('right'),
+    masteredDays: daysOf('mastered'),
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+  // take off only what was sent: answers given while the save was in flight stay pending
+  const left = readBoard();
+  for (const [day, d] of Object.entries(sent)) {
+    if (!left[day]) continue;
+    left[day].right -= d.right; left[day].mastered -= d.mastered;
+    if (left[day].right <= 0 && left[day].mastered <= 0) delete left[day];
+  }
+  writeBoard(left);
+}
+
 async function pushDays() {
   const sent = readPending();
   const entries = Object.entries(sent).filter(([, n]) => n > 0);
@@ -99,6 +138,7 @@ async function pushDays() {
 // app.js calls this whenever progress changes (answered is false for a reset); one save per burst of answers
 window.cloudSync = answered => {
   if (answered) countAnswer();
+  if (answered && typeof answered === 'object') countForBoard(answered);
   if (!uid) return;
   if (answered) markDay().catch(err => { activeDay = null; warn('Saving your streak failed')(err); });
   clearTimeout(timer);
@@ -106,19 +146,23 @@ window.cloudSync = answered => {
     timer = null;
     push().catch(warn('Saving progress to your account failed'));
     pushDays().catch(warn('Saving today’s answer count failed'));
+    pushBoard().catch(warn('Saving your leaderboard scores failed'));
   }, 2000);
 };
-addEventListener('pagehide', () => { if (timer) { clearTimeout(timer); timer = null; push(); pushDays(); } });
+addEventListener('pagehide', () => { if (timer) { clearTimeout(timer); timer = null; push(); pushDays(); pushBoard(); } });
 
 onUser(async user => {
   uid = user?.uid ?? null;
+  profile = null;
   activeDay = null;
   renderAccount(user);
   if (!user) return;
   try {
-    renderAccount(user, await ensureProfile(user));
+    profile = await ensureProfile(user);
+    renderAccount(user, profile);
     await pull();
     await pushDays();
+    await pushBoard();
   } catch (err) {
     warn('Could not load your account')(err);
   }

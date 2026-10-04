@@ -3,7 +3,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, runTransaction, arrayUnion, increment, serverTimestamp, collection, getDocs }
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, runTransaction, arrayUnion, increment, serverTimestamp, collection, getDocs }
   from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-lite.js';   // plain requests: ad blockers stop the full SDK's live channel
 import { firebaseConfig } from '../firebase-config.js';
 
@@ -31,7 +31,11 @@ export async function signInWithGoogle() {
 export const signOutUser = () => signOut(auth);
 
 /* users/{uid}:
-     username     the name shown on the site, taken from Google on the first sign-in
+     username     the name shown on the site: the learner's chosen nickname, or their Google name until they choose one
+     nicknameChosen  true once the learner has picked a nickname; until then the sign-in page asks for one
+     leaderboardHidden  true when the learner has taken themselves off the leaderboard
+   leaderboard/{uid}, readable by every signed-in learner: the nickname and scores (see core/sync.js). Learners who
+   have not chosen a nickname show as "A learner", so a Google name is never shown to anyone else.
      email, createdAt
      languages    the languages practised, by folder id: ['polish', 'spanish']
      lastDay      the last day with an answer, 'YYYY-MM-DD' in the learner's own time zone
@@ -48,6 +52,20 @@ export async function ensureProfile(user) {
   };
   await setDoc(ref, profile);
   return profile;
+}
+
+// Saves a nickname already checked by NICKNAME.cleanNickname (core/nickname.js)
+// and renames the learner on the leaderboard, unless they have taken themselves off it
+export async function saveNickname(user, nickname, profile = {}) {
+  await setDoc(doc(db, 'users', user.uid), { username: nickname, nicknameChosen: true }, { merge: true });
+  if (!profile.leaderboardHidden) await setDoc(doc(db, 'leaderboard', user.uid), { name: nickname }, { merge: true });
+}
+
+// Off the leaderboard deletes the learner's entry outright, so nothing of theirs stays readable; back on starts a fresh one
+export async function setLeaderboardHidden(user, profile, hidden) {
+  await setDoc(doc(db, 'users', user.uid), { leaderboardHidden: hidden }, { merge: true });
+  if (hidden) await deleteDoc(doc(db, 'leaderboard', user.uid));
+  else await setDoc(doc(db, 'leaderboard', user.uid), { name: profile.nicknameChosen ? profile.username || '' : '' }, { merge: true });
 }
 
 // displayName is what the first accounts stored before username

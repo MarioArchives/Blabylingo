@@ -41,8 +41,9 @@
   if (lastPage) { const back = document.getElementById('back'); back.href = lastPage.href; back.textContent = `← ${lastPage.name}`; }
 </script>
 <script src="core/insights.js"></script>
+<script src="core/nickname.js"></script>
 <script type="module">
-  import { currentUser, ensureProfile, nameOf, signOutUser, db, collection, getDocs } from './core/cloud.js';
+  import { currentUser, ensureProfile, nameOf, saveNickname, setLeaderboardHidden, signOutUser, db, collection, getDocs } from './core/cloud.js';
 
   const box = document.getElementById('account-page');
   const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
@@ -67,12 +68,23 @@
     const line = [practising, since].filter(Boolean).join(' · ');
     return `<div class="identity">
       ${avatar(name)}
-      <div>
-        <p class="identity-name">${esc(name)}</p>
-        ${line ? `<p class="identity-line">${esc(line)}</p>` : ''}
-      </div>
+      <div class="identity-text">${identityText(name, line)}</div>
     </div>`;
   }
+
+  const identityText = (name, line) => `
+        <p class="identity-name"><span>${esc(name)}</span>
+          <button type="button" class="link-btn identity-edit" id="edit-nickname">Change nickname</button></p>
+        ${line ? `<p class="identity-line">${esc(line)}</p>` : ''}`;
+
+  const nicknameForm = (current, error = '') => `<form class="nickname-form" id="nickname-form" novalidate>
+      <label for="nickname">Nickname</label>
+      <input id="nickname" name="nickname" type="text" maxlength="${NICKNAME.NICKNAME_MAX}" autocomplete="nickname" spellcheck="false"
+        value="${esc(current)}" aria-describedby="nickname-error" ${error ? 'aria-invalid="true"' : ''} required>
+      <button type="submit" class="btn primary">Save</button>
+      <button type="button" class="btn" id="nickname-cancel">Cancel</button>
+      <p class="account-error" id="nickname-error"${error ? '' : ' hidden'}>${esc(error)}</p>
+    </form>`;
 
   const statTile = (value, label) => `<div class="stat-tile"><span class="stat-num">${esc(value)}</span><span class="stat-label">${esc(label)}</span></div>`;
 
@@ -111,6 +123,49 @@
       ${logged ? '' : '<p class="account-note">Counting starts today. Every answer you give from now on shows up here.</p>'}
     </section>`;
   }
+
+  // ---- leaderboards: right answers and mastered sentences, today / this week / all time ----
+
+  const PERIODS = [['day', 'Today'], ['week', 'This week'], ['all', 'All time']];
+  const EMPTY = { day: 'Nobody has scored today yet. Answer a few to take the lead.', week: 'Nobody has scored this week yet.', all: 'No scores yet.' };
+
+  // Your own row comes last, after a gap, when you are below the top ten
+  function boardList(rows, period) {
+    if (!rows.length) return `<p class="board-empty">${esc(EMPTY[period])}</p>`;
+    return `<ol class="board-list">${rows.map((r, i) => `${i === rows.length - 1 && r.you && i > 0 && r.rank > rows[i - 1].rank + 1 ? '<li class="board-gap" aria-hidden="true">…</li>' : ''}
+      <li class="board-row${r.you ? ' is-you' : ''}${r.rank <= 3 ? ` top-${r.rank}` : ''}">
+        <span class="board-rank">${r.rank}</span>
+        <span class="board-name">${esc(r.name)}${r.you ? ' <small>you</small>' : ''}</span>
+        <span class="board-score">${r.score}</span>
+      </li>`).join('')}</ol>`;
+  }
+
+  function boardSection(boards, period, profile, error) {
+    const periods = PERIODS.map(([id, label]) =>
+      `<button type="button" role="tab" class="board-period" data-period="${id}" aria-selected="${id === period}">${label}</button>`).join('');
+    const tables = error
+      ? '<p class="account-note">The leaderboard could not be loaded right now. Try reloading the page.</p>'
+      : `<div class="board-tables">
+          <div class="board-table"><h3>Answered right</h3><div data-board="right">${boardList(boards.right[period], period)}</div></div>
+          <div class="board-table"><h3>Mastered <span>right twice in a row</span></h3><div data-board="mastered">${boardList(boards.mastered[period], period)}</div></div>
+        </div>`;
+    const who = profile.leaderboardHidden ? 'You are hidden, so your scores are not shared.'
+      : profile.nicknameChosen ? 'You are listed by your nickname.' : 'Choose a nickname above, or you show as “A learner”.';
+    return `<section class="board" aria-labelledby="board-title">
+      <div class="board-head">
+        <h2 id="board-title">Leaderboard</h2>
+        <div class="board-periods" role="tablist" aria-label="Leaderboard period">${periods}</div>
+      </div>
+      ${tables}
+      <div class="board-foot">
+        <label class="board-opt"><input type="checkbox" id="board-show"${profile.leaderboardHidden ? '' : ' checked'}> Show me on the leaderboard</label>
+        <p class="board-note" id="board-note">${esc(who)} Weeks start on Monday.</p>
+      </div>
+    </section>`;
+  }
+
+  const SAVED_PERIOD = 'blabilingo.boardPeriod';
+  const savedPeriod = () => { try { const p = localStorage.getItem(SAVED_PERIOD); return PERIODS.some(([id]) => id === p) ? p : 'week'; } catch { return 'week'; } };
 
   const practiceTiles = totals => `<div class="stat-tiles">
     ${statTile(totals.answered, 'questions answered')}
@@ -279,9 +334,10 @@
   if (!user) location.replace(`signin.html?next=${encodeURIComponent(location.pathname)}`);
   else {
     const today = dayOf(new Date());
-    const [profileResult, docsResult] = await Promise.allSettled([
+    const [profileResult, docsResult, boardResult] = await Promise.allSettled([
       ensureProfile(user),
       getDocs(collection(db, 'users', user.uid, 'progress')),
+      getDocs(collection(db, 'leaderboard')),
     ]);
     if (profileResult.status === 'rejected') console.warn('Could not load your account', profileResult.reason);
     const profile = profileResult.status === 'fulfilled' ? profileResult.value : {};
@@ -290,6 +346,16 @@
     if (progressError) console.warn('Could not load your practice history', docsResult.reason);
     const docs = progressError ? [] : docsResult.value.docs.map(d => ({ id: d.id, data: d.data() }));
     const model = INSIGHTS.accountModel(docs, { languages: LANGUAGES });
+
+    // leaderboard/{uid} must be readable by signed-in learners in the Firestore rules (see core/cloud.js)
+    const boardError = boardResult.status === 'rejected';
+    if (boardError) console.warn('Could not load the leaderboard; do the Firestore rules let signed-in users read leaderboard/?', boardResult.reason);
+    const boardsFrom = snap => {
+      const entries = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+      return { right: INSIGHTS.leaderboards(entries, { today, metric: 'right', uid: user.uid }), mastered: INSIGHTS.leaderboards(entries, { today, metric: 'mastered', uid: user.uid }) };
+    };
+    let boards = boardError ? null : boardsFrom(boardResult.value);
+    let period = savedPeriod();
 
     const name = nameOf(profile, user);
     const langIds = (profile.languages && profile.languages.length) ? profile.languages : model.languages.map(l => l.id);
@@ -300,8 +366,69 @@
     box.innerHTML = `
       ${identityBlock(name, profile, langIds)}
       ${weekChart(INSIGHTS.weekActivity(profile.days, { today, profile }), !!profile.days && Object.keys(profile.days).length > 0, streak, profile.bestStreak || 0)}
+      ${boardSection(boards, period, profile, boardError)}
       ${progressBlock(model, progressError, selectedId)}
       <p class="account-links"><a class="btn primary" href="${esc(lastPage ? lastPage.href : './')}">Practise</a> <button type="button" class="btn" id="sign-out">Sign out</button></p>`;
+
+    // Leaderboard: the period pills redraw both tables; the switch takes you off the board or puts you back
+    const boardBox = box.querySelector('.board');
+    const drawBoards = () => {
+      if (!boards) return;
+      boardBox.querySelector('[data-board="right"]').innerHTML = boardList(boards.right[period], period);
+      boardBox.querySelector('[data-board="mastered"]').innerHTML = boardList(boards.mastered[period], period);
+    };
+    boardBox.addEventListener('click', e => {
+      const pill = e.target.closest('.board-period');
+      if (!pill) return;
+      period = pill.dataset.period;
+      boardBox.querySelectorAll('.board-period').forEach(p => p.setAttribute('aria-selected', p === pill));
+      try { localStorage.setItem(SAVED_PERIOD, period); } catch { /* private mode */ }
+      drawBoards();
+    });
+    boardBox.querySelector('#board-show').addEventListener('change', async e => {
+      const show = e.target.checked, note = boardBox.querySelector('#board-note');
+      e.target.disabled = true;
+      try {
+        await setLeaderboardHidden(user, profile, !show);
+        profile.leaderboardHidden = !show;
+        note.textContent = show ? 'You are back on the leaderboard. Your scores show up after your next answer.' : 'You are hidden, so your scores are not shared.';
+        if (!boardError) { boards = boardsFrom(await getDocs(collection(db, 'leaderboard'))); drawBoards(); }
+      } catch (err) {
+        e.target.checked = !show;
+        note.textContent = `That did not work (${err.code || err.message}). Try again.`;
+      }
+      e.target.disabled = false;
+    });
+
+    // Change nickname: the name line becomes a small form; saving updates the name and the avatar's letter
+    const nameBox = box.querySelector('.identity-text');
+    const nameLine = box.querySelector('.identity-line')?.textContent || '';
+    const showName = shown => {
+      nameBox.innerHTML = identityText(shown, nameLine);
+      box.querySelector('.avatar').outerHTML = avatar(shown);
+    };
+    const editNickname = (current, error) => {
+      nameBox.innerHTML = nicknameForm(current, error);
+      const input = nameBox.querySelector('#nickname');
+      input.focus(); input.select();
+    };
+    nameBox.addEventListener('click', e => {
+      if (e.target.closest('#edit-nickname')) editNickname(nameOf(profile, user));
+      if (e.target.closest('#nickname-cancel')) showName(nameOf(profile, user));
+    });
+    nameBox.addEventListener('submit', async e => {
+      e.preventDefault();
+      const checked = NICKNAME.cleanNickname(nameBox.querySelector('#nickname').value);
+      if (!checked.ok) return editNickname(checked.value, checked.error);
+      e.target.querySelector('[type="submit"]').disabled = true;
+      try {
+        await saveNickname(user, checked.value, profile);
+        Object.assign(profile, { username: checked.value, nicknameChosen: true });
+        showName(checked.value);
+      } catch (err) {
+        editNickname(checked.value, `Saving did not work (${err.code || err.message}). Try again.`);
+      }
+    });
 
     box.querySelector('#sign-out').addEventListener('click', async () => {
       await signOutUser();

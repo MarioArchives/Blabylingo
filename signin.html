@@ -54,6 +54,18 @@
   .signin-actions .account-note { font-size: .9375rem; }
   .signin-actions .account-error { font-size: .9375rem; padding: .625rem .875rem; background: #FBEDEE; border-radius: var(--radius-sm); }
   .signin-actions .btn { border-radius: var(--radius-pill); padding-inline: 1.375rem; }
+  /* nickname step: shown once, right after a learner's first sign-in */
+  .nickname-form { display: grid; gap: .75rem; width: 100%; }
+  .nickname-form label { display: grid; gap: .25rem; }
+  .nickname-form label b { font: 700 1.25rem var(--serif); }
+  .nickname-form label span { color: var(--ink-soft); font-size: .9375rem; }
+  .nickname-form input {
+    width: 100%; padding: .75rem 1rem; font: 400 1.125rem var(--sans); color: var(--ink);
+    background: var(--linen); border: 1.5px solid var(--rule); border-radius: var(--radius-sm);
+  }
+  .nickname-form input:focus-visible { outline: none; border-color: var(--ink); background: var(--paper); box-shadow: 0 0 0 3px rgba(28, 32, 48, .12); }
+  .nickname-form input[aria-invalid="true"] { border-color: #C1121F; }
+  .nickname-form .account-links { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.25rem; }
   .signin-who b { font-weight: 700; }
 
   .signin-guide { font-size: .9375rem; color: var(--ink-soft); }
@@ -106,8 +118,9 @@
   if (location.protocol === 'file:') document.getElementById('signin').innerHTML =
     '<p class="account-note">Signing in needs the site served over http. Run <code>./serve-for-phone.sh</code> and open <code>http://localhost:8000/signin.html</code>.</p>';
 </script>
+<script src="core/nickname.js"></script>
 <script type="module">
-  import { currentUser, signInWithGoogle, ensureProfile } from './core/cloud.js';
+  import { currentUser, signInWithGoogle, ensureProfile, saveNickname, nameOf } from './core/cloud.js';
 
   const box = document.getElementById('signin');
   // Only return to a page on this site
@@ -126,8 +139,11 @@
     box.querySelector('#google').addEventListener('click', async e => {
       e.currentTarget.disabled = true;
       try {
-        await signInWithGoogle();
-        location.replace(next);
+        const user = await signInWithGoogle();
+        const profile = await ensureProfile(user).catch(() => null);
+        // a new learner (or one who skipped it before) picks a nickname first; a database problem never blocks signing in
+        if (profile && !profile.nicknameChosen) showNickname(user, profile);
+        else location.replace(next);
       } catch (err) {
         const closed = err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request';
         showSignIn(closed ? '' : err.code === 'auth/popup-blocked'
@@ -137,10 +153,44 @@
     });
   }
 
+  // The name shown on the site instead of the Google one. Skipping keeps the Google name and asks again next sign-in.
+  function showNickname(user, profile, error = '') {
+    document.getElementById('signin-title').textContent = 'Welcome!';
+    document.querySelector('.signin-pitch').textContent = 'Your Blabilingo account is ready. One last thing:';
+    document.querySelector('.signin-samples').hidden = true;
+    box.innerHTML = `
+      <form class="nickname-form" id="nickname-form" novalidate>
+        <label for="nickname"><b>Choose a nickname</b>
+          <span>Blabilingo shows it instead of your Google name. You can change it any time on your account page.</span></label>
+        <input id="nickname" name="nickname" type="text" maxlength="${NICKNAME.NICKNAME_MAX}" autocomplete="nickname" spellcheck="false"
+          placeholder="e.g. Kasia92" aria-describedby="nickname-error" required>
+        <p class="account-error" id="nickname-error"${error ? '' : ' hidden'}>${esc(error)}</p>
+        <p class="account-links"><button type="submit" class="btn primary">Save and continue</button>
+          <button type="button" class="link-btn" id="nickname-skip">Skip for now</button></p>
+      </form>`;
+    const form = box.querySelector('#nickname-form'), input = box.querySelector('#nickname'), err = box.querySelector('#nickname-error');
+    input.focus();
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const checked = NICKNAME.cleanNickname(input.value);
+      if (!checked.ok) { err.textContent = checked.error; err.hidden = false; input.setAttribute('aria-invalid', 'true'); input.focus(); return; }
+      form.querySelector('[type="submit"]').disabled = true;
+      try {
+        await saveNickname(user, checked.value, profile);
+        location.replace(next);
+      } catch (ex) {
+        showNickname(user, profile, `Saving your nickname did not work (${ex.code || ex.message}). Try again, or skip for now.`);
+        box.querySelector('#nickname').value = checked.value;
+      }
+    });
+    box.querySelector('#nickname-skip').addEventListener('click', () => location.replace(next));
+  }
+
   const user = await currentUser();
   if (user) {
-    const profile = await ensureProfile(user).catch(() => ({}));
-    box.innerHTML = `<p class="signin-who">You are signed in as <b>${esc(profile.displayName || user.displayName || user.email)}</b>.</p>
+    const profile = await ensureProfile(user).catch(() => null);
+    if (profile && !profile.nicknameChosen) showNickname(user, profile);
+    else box.innerHTML = `<p class="signin-who">You are signed in as <b>${esc(nameOf(profile || {}, user))}</b>.</p>
       <p class="account-links"><a class="btn primary" href="account.html">Your account</a> <a class="btn" href="./">Practise</a></p>`;
   } else showSignIn();
 </script>
