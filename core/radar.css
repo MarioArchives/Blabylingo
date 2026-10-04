@@ -10,7 +10,7 @@
 .league-gold    { --mastered: #B38A12; --correct: #E2BE4A; --tint: #FAF0CE; --edge: #C99D1C; --league-ink: #6B5000; }
 .league-diamond { --mastered: #1F7FA8; --correct: #7CCBE4; --tint: #DDF1F8; --edge: #2E93BE; --league-ink: #0F4E6A; }
 
-/* Radar chart: no colours set here beyond the design tokens, everything else comes from insights.js's markup */
+/* Radar chart: no colours set here beyond the design tokens; group colours come from insights.js's markup */
 .radar { display: block; width: 100%; height: auto; overflow: visible; }
 .radar-bg { fill: var(--tint); }
 .radar-ring { fill: none; stroke: var(--paper); stroke-width: 1.5; }
@@ -21,7 +21,35 @@
 .radar-hit { fill: transparent; pointer-events: all; cursor: pointer; }
 .radar-point:focus-visible .radar-hit { fill: var(--linen); opacity: .5; }
 .radar-point { outline: none; }
-.radar-label { font-family: var(--sans); font-weight: 400; fill: var(--ink-soft); }   /* size comes from radarSVG */
+.radar-edge { fill: none; stroke-linejoin: miter; stroke-linecap: butt; }   /* colour and width come from radarSVG */
+.radar-badge text { font-family: var(--sans); font-weight: 700; fill: var(--paper); pointer-events: none; }   /* size comes from radarSVG */
+.radar-badge { cursor: pointer; outline: none; }
+.radar-badge circle { transition: r .15s; }
+.radar-badge:hover circle, .radar-badge:focus-visible circle { r: 15px; }
+.radar-badge:focus-visible circle { stroke: var(--straw); stroke-width: 3; }
+
+/* Popup with one group's scores, opened from its badge; it takes the chart's league class for its bar colours */
+.radar-pop { width: min(22rem, calc(100vw - 32px)); padding: 0; border: 2px solid var(--edge); border-radius: 2px;
+  background: var(--paper); color: var(--ink); font: 400 1rem/1.45 var(--sans); }
+.radar-pop::backdrop { background: rgba(28, 32, 48, .45); }
+.radar-pop-body { display: grid; gap: 1rem; padding: 1.25rem; }
+.radar-pop-head { display: grid; grid-template-columns: auto 1fr auto; gap: .75rem; align-items: center; }
+.radar-pop-badge { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%;
+  background: var(--c); color: var(--paper); font: 700 1rem var(--sans); }
+.radar-pop h2 { margin: 0; font: 700 1.25rem/1.2 var(--serif); }
+.radar-pop-en { margin: 0; color: var(--ink-soft); font-size: .9375rem; }
+.radar-pop-close { align-self: start; width: 2.25rem; height: 2.25rem; border: 0; border-radius: 50%; background: var(--linen);
+  color: var(--ink); font: 400 1.375rem/1 var(--sans); cursor: pointer; }
+.radar-pop-close:hover { background: var(--rule); }
+.radar-pop-close:focus-visible { outline: 3px solid var(--straw); outline-offset: 2px; }
+.radar-pop-stats { display: grid; gap: .75rem; margin: 0; }
+.radar-pop-stats div { display: grid; grid-template-columns: 1fr auto; gap: .25rem .75rem; align-items: baseline; }
+.radar-pop-stats dt { color: var(--ink-soft); }
+.radar-pop-stats dt small { font-size: .8125rem; }
+.radar-pop-stats dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.radar-pop-track { grid-column: 1 / -1; height: .5rem; background: var(--linen); border-radius: var(--radius-pill); overflow: hidden; }
+.radar-pop-fill { display: block; height: 100%; background: var(--bar); border-radius: inherit; }
+.radar-pop-note { margin: 0; color: var(--ink-soft); font-size: .875rem; }
 
 /* Tooltip for a radar point, positioned in script from the point's bounding box */
 .radar-tip {
@@ -39,7 +67,6 @@
 .quiz-league .radar-bg, .radar-card[class*="league-"] .radar-bg { fill: var(--paper); }
 .quiz-league .radar-ring, .quiz-league .radar-axis,
 .radar-card[class*="league-"] .radar-ring, .radar-card[class*="league-"] .radar-axis { stroke: var(--tint); }
-.quiz-league .radar-label, .radar-card[class*="league-"] .radar-label { fill: var(--league-ink); }
 
 /* End-of-quiz chart card: the script swaps its league-* class on promotion */
 .quiz-league { margin-top: 2rem; padding: 1.25rem; border: 2px solid var(--edge); border-radius: 2px; text-align: center; }
@@ -52,7 +79,7 @@
 @media (prefers-reduced-motion: no-preference) {
   .quiz-league { transition: background-color .6s, border-color .6s, color .6s; }
   .quiz-league h3 { transition: color .6s; }
-  .quiz-league .radar-bg, .quiz-league .radar-label { transition: fill .6s; }
+  .quiz-league .radar-bg { transition: fill .6s; }
   .quiz-league .radar-ring, .quiz-league .radar-axis, .quiz-league .radar-shape-before { transition: stroke .6s; }
   .quiz-league .radar-shape, .quiz-league .radar-shape-correct { transition: fill .6s, stroke .6s; }
   .league-message.shown { animation: message-in .6s ease-out; }

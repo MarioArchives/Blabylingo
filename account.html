@@ -41,6 +41,7 @@
   if (lastPage) { const back = document.getElementById('back'); back.href = lastPage.href; back.textContent = `← ${lastPage.name}`; }
 </script>
 <script src="core/insights.js"></script>
+<script src="core/radar-popup.js"></script>
 <script src="core/nickname.js"></script>
 <script type="module">
   import { currentUser, ensureProfile, nameOf, saveNickname, setLeaderboardHidden, signOutUser, db, collection, getDocs } from './core/cloud.js';

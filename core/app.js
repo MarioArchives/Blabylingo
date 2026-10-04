@@ -1203,11 +1203,13 @@
     const finish = () => {
       message.textContent = text;
       message.classList.add('shown');
-      // the tooltips and screen-reader label describe the final scores
+      // the tooltips, badge popups and screen-reader label describe the final scores
       const fresh = new DOMParser().parseFromString(INSIGHTS.radarSVG(after, { label: name }), 'image/svg+xml').documentElement;
       svg.setAttribute('aria-label', fresh.getAttribute('aria-label'));
       const tips = [...fresh.querySelectorAll('.radar-point')].map(p => p.getAttribute('data-tip'));
       svg.querySelectorAll('.radar-point').forEach((p, i) => p.setAttribute('data-tip', tips[i]));
+      const stats = [...fresh.querySelectorAll('.radar-badge')].map(b => b.getAttribute('data-stats'));
+      svg.querySelectorAll('.radar-badge').forEach((b, i) => b.setAttribute('data-stats', stats[i]));
     };
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       draw(INSIGHTS.radarGrowth(before, after, 1));

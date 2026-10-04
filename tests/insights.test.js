@@ -339,11 +339,27 @@ test('radarSVG: zooms to the scale and names it for screen readers', () => {
   near(top[1], -80);
 });
 
-test('radarSVG: labels use the short name with the full name as a title, and no group colours', () => {
-  const scores = scoresOf(['Mianownik', 'Dopełniacz', 'Celownik']).map((s, i) => ({ ...s, short: ['Mian.', 'Dop.', 'Cel.'][i], colour: ['nom', 'gen', 'dat'][i] }));
+test('radarSVG: each corner is edged in its group colour, with a badge showing its initial', () => {
+  const scores = scoresOf(['Mianownik', 'Dopełniacz', 'Celownik']).map((s, i) => ({ ...s, colour: ['nom', 'gen', 'dat'][i], ini: ['M', 'D', 'C'][i] }));
   const svg = I.radarSVG(scores);
-  assert.match(svg, /<text class="radar-label"[^>]*><title>Dopełniacz<\/title>Dop\.<\/text>/);
-  assert.ok(!svg.includes('--c:'));
+  assert.equal((svg.match(/class="radar-edge" style="stroke: var\(--gen\)"/g) || []).length, 1);
+  assert.match(svg, /<g class="radar-badge"[^>]*><title>Dopełniacz<\/title><circle style="fill: var\(--gen\)"[^>]*\/><text[^>]*>D<\/text><\/g>/);
+});
+
+test('radarSVG: each badge is a button carrying its group\'s scores for the popup', () => {
+  const scores = scoresOf(['Mianownik', 'Dopełniacz', 'Celownik']).map((s, i) => ({ ...s, ini: ['M', 'D', 'C'][i], correct: i + 1 }));
+  const badges = [...I.radarSVG(scores).matchAll(/<g class="radar-badge" role="button" tabindex="0"[^>]*data-stats="([^"]*)"/g)];
+  assert.equal(badges.length, 3);
+  const unesc = t => t.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  assert.deepEqual(JSON.parse(unesc(badges[1][1])), {
+    pl: 'Dopełniacz', en: 'Group 1', ini: 'D', colour: 'nom', mastered: 1, correct: 2, total: 10, seen: 5, answers: 10, accuracy: 0.5,
+  });
+});
+
+test('radarSVG: a group without an initial gets the first letter or digit of its short name', () => {
+  const scores = scoresOf(['Być', 'Dwa', 'Coś']).map((s, i) => ({ ...s, short: ['+bezok.', '2–4', '¿Cuál?'][i] }));
+  const initials = [...I.radarSVG(scores).matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map(m => m[1]);
+  assert.deepEqual(initials, ['B', '2', 'C']);
 });
 
 test('radarSVG: every chart shares one frame, whatever its group count or names', () => {
@@ -351,10 +367,9 @@ test('radarSVG: every chart shares one frame, whatever its group count or names'
   const b = I.radarSVG(scoresOf(['A very long group name', 'Dopełniacz', 'Miejscownik', 'D', 'E', 'F', 'G']));
   const vb = svg => svg.match(/viewBox="([^"]*)"/)[1];
   assert.equal(vb(a), vb(b));
-  assert.match(b, /textLength="[\d.]+" lengthAdjust="spacingAndGlyphs"><title>/);
 });
 
-test('data: every radar group has a short name that fits the chart frame (7 characters)', () => {
+test('data: every radar group has a short name of up to 7 characters and an initial unique in its topic', () => {
   for (const lang of ['polish', 'spanish']) {
     const ctx = {};
     vm.createContext(ctx);
@@ -367,6 +382,11 @@ test('data: every radar group has a short name that fits the chart frame (7 char
     for (const g of groupLists.flat()) {
       assert.ok(g.short, `${lang} ${g.id}: no short name`);
       assert.ok([...g.short].length <= 7, `${lang} ${g.id}: '${g.short}' is longer than 7 characters`);
+    }
+    for (const groups of groupLists) {
+      for (const g of groups) assert.ok(g.ini && [...g.ini].length <= 2, `${lang} ${g.id}: needs an initial of 1 or 2 characters`);
+      const inis = groups.map(g => g.ini);
+      assert.equal(new Set(inis).size, inis.length, `${lang}: initials repeat within a topic: ${inis.join(', ')}`);
     }
   }
 });

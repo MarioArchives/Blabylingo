@@ -55,6 +55,9 @@ const INSIGHTS = (() => {
     return [...byTopic.values()].sort((a, b) => b.keys.length - a.keys.length || topicCompare(a.topic, b.topic));
   };
 
+  // Summaries saved before groups had initials fall back to the first letter or digit of the name
+  const initialOf = name => (String(name).match(/[\p{L}\p{N}]/u) || ['?'])[0].toUpperCase();
+
   const groupScores = (summary, items) => {
     const stats = Object.fromEntries(summary.groups.map(g => [g.id, { seen: 0, mastered: 0, correct: 0, n: 0, ok: 0 }]));
     for (const [key, r] of Object.entries(items || {})) {
@@ -70,7 +73,7 @@ const INSIGHTS = (() => {
     return summary.groups.map(g => {
       const s = stats[g.id];
       return {
-        id: g.id, pl: g.pl, short: g.short || g.pl, en: g.en, colour: g.colour, total: g.total,
+        id: g.id, pl: g.pl, short: g.short || g.pl, ini: g.ini || initialOf(g.short || g.pl), en: g.en, colour: g.colour, total: g.total,
         seen: s.seen, mastered: s.mastered, correct: s.correct, n: s.n, ok: s.ok,
         share: g.total > 0 ? Math.min(1, Math.max(0, s.mastered / g.total)) : 0,
         correctShare: g.total > 0 ? Math.min(1, Math.max(0, s.correct / g.total)) : 0,
@@ -90,7 +93,7 @@ const INSIGHTS = (() => {
     return {
       language,
       topic: { id: topic.id, pl: topic.pl, en: topic.en },
-      groups: topic.groups.map(g => ({ id: g.id, pl: g.pl, ...(g.short ? { short: g.short } : {}), en: g.en, colour: g.colour, total: totalsByGroup[g.id] || 0 })),
+      groups: topic.groups.map(g => ({ id: g.id, pl: g.pl, ...(g.short ? { short: g.short } : {}), ...(g.ini ? { ini: g.ini } : {}), en: g.en, colour: g.colour, total: totalsByGroup[g.id] || 0 })),
       glosses,
     };
   };
@@ -198,16 +201,12 @@ const INSIGHTS = (() => {
   };
   const radarLeagueFor = scores => radarLeague(Math.max(0, ...(scores || []).map(s => Math.max(clampShare(s.share), clampShare(s.correctShare)))));
 
-  // Every chart uses the same frame, so shapes are the same size whatever the group count or names.
-  // It leaves room for a label of LABEL_CHARS at the end of any axis; longer names are squeezed to fit.
-  const RADAR_R = 100, LABEL_GAP = 12, LABEL_FONT = 17, LABEL_CHARS = 7;
-  const CHAR_WIDTH = LABEL_FONT * 0.58;             // a generous Lato average, so estimated widths never fall short
-  const LABEL_ROOM = LABEL_CHARS * CHAR_WIDTH;
+  // Every chart uses the same frame, so shapes are the same size whatever the group count.
+  // The frame leaves room for the initial badge just past each corner.
+  const RADAR_R = 100, EDGE_WIDTH = 3.5, BADGE_GAP = 19, BADGE_R = 13;
   const RADAR_VIEWBOX = (() => {
-    const reach = RADAR_R + LABEL_GAP;
-    const x = Math.ceil(reach + LABEL_ROOM) + 4;
-    const top = Math.ceil(reach + LABEL_FONT) + 4, bottom = Math.ceil(reach + 0.3 * LABEL_FONT) + 4;
-    return `${-x} ${-top} ${2 * x} ${top + bottom}`;
+    const x = RADAR_R + BADGE_GAP + BADGE_R + 4;
+    return `${-x} ${-x} ${2 * x} ${2 * x}`;
   })();
 
   // Clamped shares per group; answered right is never below mastered, so its shape never sits inside.
@@ -301,20 +300,31 @@ const INSIGHTS = (() => {
         + `<circle class="radar-hit" r="16" cx="${round(x)}" cy="${round(y)}"/></g>`;
     }).join('');
 
-    // Short names at each axis end; anything wider than the frame allows is squeezed
-    const labels = scores.map((s, i) => {
-      const [x, y] = axisPoint(n, i, r + LABEL_GAP, cx, cy);
-      const anchor = Math.abs(x - cx) < 1 ? 'middle' : x > cx ? 'start' : 'end';
-      const text = String(s.short || s.pl);
-      const fit = text.length * CHAR_WIDTH > LABEL_ROOM ? ` textLength="${round(LABEL_ROOM)}" lengthAdjust="spacingAndGlyphs"` : '';
-      return `<text class="radar-label" x="${round(x)}" y="${round(y)}" text-anchor="${anchor}" font-size="${LABEL_FONT}"${fit}`
-        + `><title>${esc(s.pl)}</title>${esc(text)}</text>`;
-    }).join('');
+    // Each group's corner of the outer ring, from the middle of one edge to the middle of the next, is edged in the
+    // group's colour, and a badge with the group's initial sits just past the corner.
+    const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const colourOf = s => s.colour ? `var(--${esc(s.colour)})` : 'var(--ink-soft)';
+    const edges = [], badges = [];
+    scores.forEach((s, i) => {
+      const corner = bgPts[i];
+      const [x1, y1] = mid(bgPts[(i + n - 1) % n], corner), [x2, y2] = mid(corner, bgPts[(i + 1) % n]);
+      const path = `M${round(x1)},${round(y1)} L${round(corner[0])},${round(corner[1])} L${round(x2)},${round(y2)}`;
+      edges.push(`<path class="radar-edge" style="stroke: ${colourOf(s)}" stroke-width="${EDGE_WIDTH}" d="${path}"/>`);
+      const [bx, by] = axisPoint(n, i, r + BADGE_GAP, cx, cy);
+      const ini = String(s.ini || initialOf(s.short || s.pl));
+      // the badge opens a popup with the group's scores (core/radar-popup.js), so it carries them
+      const stats = { pl: s.pl, en: s.en, ini, colour: s.colour || '', mastered: s.mastered || 0, correct: s.correct || 0,
+        total: s.total || 0, seen: s.seen || 0, answers: s.n || 0, accuracy: s.accuracy ?? null };
+      badges.push(`<g class="radar-badge" role="button" tabindex="0" aria-haspopup="dialog" aria-label="${esc(`Show ${s.pl} scores`)}" `
+        + `data-stats="${esc(JSON.stringify(stats))}"><title>${esc(s.pl)}</title>`
+        + `<circle style="fill: ${colourOf(s)}" r="${BADGE_R}" cx="${round(bx)}" cy="${round(by)}"/>`
+        + `<text x="${round(bx)}" y="${round(by)}" dy=".35em" text-anchor="middle" font-size="${[...ini].length > 1 ? 10.5 : 12.5}">${esc(ini)}</text></g>`);
+    });
 
     const aria = `${esc(label)}, ${league.name} league, zoomed to ${Math.round(scale * 100)}%: ${scores.map((s, i) => `${esc(s.pl)} ${Math.round(shares[i] * 100)}% mastered, ${Math.round(correctShares[i] * 100)}% answered right`).join(', ')}`;
 
     return `<svg class="radar" viewBox="${RADAR_VIEWBOX}" role="img" aria-label="${aria}">`
-      + `${background}${rings}${axes}${correctShape}${shape}${points}${labels}</svg>`;
+      + `${background}${rings}${axes}${correctShape}${shape}${edges.join('')}${points}${badges.join('')}</svg>`;
   };
 
   const TOPIC_ORDER = ['cases', 'present', 'past', 'future', 'numbers', 'idioms'];

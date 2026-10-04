@@ -12,7 +12,7 @@ const NUMBERS = {
   intro: 'Most Spanish numbers never change, but a few do. Uno shortens to un and has a feminine una, the hundreds agree with their noun (doscientos libros, doscientas casas), and millón is a noun that takes de. Ordinals like primero and tercero agree like adjectives and shorten before a masculine noun. Dates use plain numbers, and clock times agree with la hora: la una, las dos.',
   groups: [
     {
-      id: 'num-uno', pl: 'Uno, un, una', short: 'Uno', en: 'One: uno, un, una', q: 'un libro, una mesa, veintiún años',
+      id: 'num-uno', pl: 'Uno, un, una', short: 'Uno', ini: 'U', en: 'One: uno, un, una', q: 'un libro, una mesa, veintiún años',
       summary: 'One agrees with its noun. Before a masculine noun it shortens to un, before a feminine noun it is una, and on its own (when the noun is left out) the masculine is uno. Every number ending in one does the same: veintiún años, treinta y una personas.',
       tables: [
         { title: 'One and the numbers that end in one',
@@ -37,7 +37,7 @@ const NUMBERS = {
       ],
     },
     {
-      id: 'num-cien', pl: 'Cien y cientos', short: 'Cien', en: 'Hundreds', q: 'cien, ciento diez, doscientas',
+      id: 'num-cien', pl: 'Cien y cientos', short: 'Cien', ini: 'C', en: 'Hundreds', q: 'cien, ciento diez, doscientas',
       summary: 'A hundred on its own, or right before a noun, mil or millones, is cien. When more numbers follow it becomes ciento: ciento diez. From 200 to 900 the hundreds agree with the noun: doscientos libros, doscientas casas. Five, seven and nine hundred are irregular: quinientos, setecientos, novecientos.',
       tables: [
         { title: 'Hundreds with a noun',
@@ -64,7 +64,7 @@ const NUMBERS = {
       ],
     },
     {
-      id: 'num-mil', pl: 'Mil y millón', short: 'Mil', en: 'Thousands and millions', q: 'dos mil, dos millones de',
+      id: 'num-mil', pl: 'Mil y millón', short: 'Mil', ini: 'M', en: 'Thousands and millions', q: 'dos mil, dos millones de',
       summary: 'Mil never takes a plural in a number: dos mil, diez mil. Millón is a noun, so it has a plural, millones, and takes de before a noun: un millón de personas. When more numbers follow millón, de drops out. Miles and millones on their own mean a vague amount: miles de personas.',
       tables: [
         { title: 'Mil and millón',
@@ -89,7 +89,7 @@ const NUMBERS = {
       ],
     },
     {
-      id: 'num-ordinal', pl: 'Ordinales', short: 'Ordin.', en: 'First, second, third', q: 'primer piso, primera vez',
+      id: 'num-ordinal', pl: 'Ordinales', short: 'Ordin.', ini: 'O', en: 'First, second, third', q: 'primer piso, primera vez',
       summary: 'Ordinals are adjectives, so they agree with their noun: primero, primera, primeros, primeras. Primero and tercero drop the final -o before a masculine singular noun: el primer piso, el tercer año. In everyday speech ordinals are used up to about tenth.',
       tables: [
         { title: 'Ordinals',
@@ -114,7 +114,7 @@ const NUMBERS = {
       ],
     },
     {
-      id: 'num-dates', pl: 'Fechas y horas', short: 'Fechas', en: 'Dates and times', q: 'el dos de mayo, a las tres',
+      id: 'num-dates', pl: 'Fechas y horas', short: 'Fechas', ini: 'F', en: 'Dates and times', q: 'el dos de mayo, a las tres',
       summary: 'Dates use plain numbers: el dos de mayo, el quince de junio. Only the first of the month can be el primero, and in Latin America that is the usual form. Clock times agree with la hora, which is feminine: la una, las dos. One o’clock is singular (es la una), every other hour is plural (son las dos).',
       tables: [
         { title: 'Dates',

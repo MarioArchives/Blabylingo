@@ -9,7 +9,7 @@ const FUTURE_TENSE = {
 
   groups: [
     {
-      id: 'future-ir-a', pl: 'Ir a + verbo', short: 'Ir a', en: 'Going to', q: 'voy a comer',
+      id: 'future-ir-a', pl: 'Ir a + verbo', short: 'Ir a', ini: 'A', en: 'Going to', q: 'voy a comer',
       summary: 'The present of ir, then a, then the infinitive: voy a comer. This is the most common way to talk about plans and things about to happen, especially in speech.',
       tables: [
         { title: 'ir in the present + a + infinitive',
@@ -53,7 +53,7 @@ const FUTURE_TENSE = {
       ],
     },
     {
-      id: 'future-reg', pl: 'Futuro regular', short: 'Regular', en: 'Simple future, regular', q: 'hablar → hablaré',
+      id: 'future-reg', pl: 'Futuro regular', short: 'Regular', ini: 'R', en: 'Simple future, regular', q: 'hablar → hablaré',
       summary: 'The futuro simple adds one set of endings to the whole infinitive, for all three conjugations: -é, -ás, -á, -emos, -án. It is used for predictions, promises and the more distant or less certain future.',
       tables: [
         { title: 'hablar, comer, vivir: one set of endings',
@@ -100,7 +100,7 @@ const FUTURE_TENSE = {
       ],
     },
     {
-      id: 'future-irr', pl: 'Futuro irregular', short: 'Irreg.', en: 'Simple future, irregular', q: 'tener → tendré, hacer → haré',
+      id: 'future-irr', pl: 'Futuro irregular', short: 'Irreg.', ini: 'I', en: 'Simple future, irregular', q: 'tener → tendré, hacer → haré',
       summary: 'Twelve common verbs shorten their infinitive before the same endings: tendr-, podr-, har-, dir-. The endings never change, only the stem does.',
       tables: [
         { title: 'tener, hacer, decir: short stem, same endings',
@@ -145,7 +145,7 @@ const FUTURE_TENSE = {
       ],
     },
     {
-      id: 'future-prob', pl: 'Probabilidad', short: 'Probab.', en: 'Guessing and future perfect', q: 'Serán las tres. Habrá salido.',
+      id: 'future-prob', pl: 'Probabilidad', short: 'Probab.', ini: 'P', en: 'Guessing and future perfect', q: 'Serán las tres. Habrá salido.',
       summary: 'The futuro also expresses a guess about the present: ¿Dónde estará Juan? means I wonder where Juan is. The futuro perfecto (habré + participle) says what will have happened by a point in the future, or guesses about the recent past: habrá salido ya.',
       tables: [
         { title: 'The future as a guess',
@@ -179,7 +179,7 @@ const FUTURE_TENSE = {
       ],
     },
     {
-      id: 'future-choice', pl: 'Ir a o futuro', short: '¿Cuál?', en: 'Going to or will', q: 'voy a comer / comeré',
+      id: 'future-choice', pl: 'Ir a o futuro', short: '¿Cuál?', ini: '?', en: 'Going to or will', q: 'voy a comer / comeré',
       summary: 'Both forms talk about the future, and often either works. Ir a is the natural choice for plans, decisions already made and things about to happen; the futuro simple suits predictions, promises, the distant future and formal or written Spanish.',
       tables: [
         { title: 'Which one?',
