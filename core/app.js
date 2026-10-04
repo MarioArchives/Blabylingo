@@ -130,7 +130,19 @@
       <ul class="forgotten-list">${words.map(w => {
         const forms = [...new Set(w.keys.map(k => sentenceOfKey[k]?.a?.[0]).filter(Boolean))];
         return `<li class="forgotten-chip" tabindex="0" data-gloss="${esc(forms.join(', '))}"><b lang="${APP.lang}">${esc(w.base)}</b><span>${esc(w.gloss)}</span></li>`;
-      }).join('')}</ul>`;
+      }).join('')}</ul>
+      <p class="forgotten-practise">Practise ${INSIGHTS.forgottenByTopic(words).map(g => {
+        const t = TOPICS.find(x => x.id === g.topic);
+        return t ? `<button type="button" class="btn" data-action="practise-forgotten" data-topic="${esc(t.id)}">${esc(t.en)} <span>${plural(g.keys.length, 'sentence')}</span></button>` : '';
+      }).join('')}</p>`;
+  }
+
+  // A quiz of the sentences missed for the forgotten words of one topic; answering one right takes its word off the list
+  function practiseForgotten(topicId) {
+    const group = INSIGHTS.forgottenByTopic(INSIGHTS.forgottenWords(progress, { glosses: wordGlosses })).find(g => g.topic === topicId);
+    if (!group) return;
+    if (state.topic.id !== topicId) setTopic(topicId);
+    startQuiz(group.keys.map(k => sentenceOfKey[k]).filter(Boolean), true);
   }
 
   function groupStats(items) {
@@ -160,6 +172,7 @@
       queue: q.queue.map(s => keyOf(state.topic, s)),
       results: q.results.map(r => ({ key: keyOf(state.topic, r.item), right: r.right, solved: r.solved, mode: r.mode })),
       revealed: q.revealed, checked: q.checked, firstTryRight: q.firstTryRight, feedback: q.feedback, typed: q.typed,
+      before: q.before,
     });
   }
   function savedQuiz() {
@@ -171,6 +184,7 @@
     return {
       queue, idx: r.idx, results: r.results.map(x => ({ item: byKey[x.key], right: x.right, solved: x.solved ?? x.right, mode: x.mode })).filter(x => x.item),
       revealed: !!r.revealed, checked: !!r.checked, firstTryRight: !!r.firstTryRight, feedback: r.feedback || null, typed: r.typed || '',
+      before: r.before || undefined,
     };
   }
   function resumeQuiz() {
@@ -299,26 +313,35 @@
       </td>`; }).join('')}</tr>`;
   }
 
+  // A number where every cell is "= N" (the vocative plural) shows the nominative's own forms instead of "no change".
+  // Their footnote marks point at the nominative's notes, so they are dropped here.
+  const sameAsNominative = (c, number) => c.id !== 'nom' && c.grid[number].every(r => r.cells.every(x => x.eq === '= N'))
+    && CASES.some(x => x.id === 'nom');
+  const gridRows = (c, number) => !sameAsNominative(c, number) ? c.grid[number]
+    : CASES.find(x => x.id === 'nom').grid[number].map(r => ({ ...r, cells: r.cells.map(x => ({ ...x, end: x.end.replace(/[¹²³⁴]/g, '') })) }));
+  const gridTitle = (c, number) => `${esc(c.en)} ${number === 'sg' ? 'singular' : 'plural'}${sameAsNominative(c, number)
+    ? ` <span class="g-same">same as the nominative ${number === 'sg' ? 'singular' : 'plural'}</span>` : ''}`;
+
   function caseGrid(c, hl, only) {
     const sg = hl && hl.number === 'sg' ? hl : null, pl = hl && hl.number === 'pl' ? hl : null;
     const singular = `
-        <caption>${esc(c.en)} singular</caption>
+        <caption>${gridTitle(c, 'sg')}</caption>
         <colgroup><col class="col-label"><col><col><col><col></colgroup>
         <thead>
           <tr><th rowspan="2" class="g-label">Gender</th><th colspan="2" class="g-head t-m">masculine</th>
             <th rowspan="2" class="g-head t-n">neuter</th><th rowspan="2" class="g-head t-f">feminine</th></tr>
           <tr><th class="g-sub t-m1">animate</th><th class="g-sub t-m2">inanimate</th></tr>
         </thead>
-        <tbody>${c.grid.sg.map(r => gridRow(r, sg, COL_NAMES.sg)).join('')}</tbody>`;
+        <tbody>${gridRows(c, 'sg').map(r => gridRow(r, sg, COL_NAMES.sg)).join('')}</tbody>`;
     const plural = `
         <tbody>
-          <tr><th colspan="5" class="g-title">${esc(c.en)} plural</th></tr>
+          <tr><th colspan="5" class="g-title">${gridTitle(c, 'pl')}</th></tr>
           <tr><th rowspan="2" class="g-label">Gender</th><th colspan="2" class="g-head t-m">masculine</th>
             <th rowspan="2" class="g-head t-n">neuter</th><th rowspan="2" class="g-head t-f">feminine</th></tr>
           <tr><th class="g-sub t-m1">personal (men)</th><th class="g-sub t-m2">other</th></tr>
-          ${c.grid.pl.map(r => gridRow(r, pl, COL_NAMES.pl)).join('')}
+          ${gridRows(c, 'pl').map(r => gridRow(r, pl, COL_NAMES.pl)).join('')}
         </tbody>`;
-    if (only) return `<div class="table-wrap grid-wrap mini"><table class="gtable">${only === 'sg' ? singular : `<caption>${esc(c.en)} plural</caption><colgroup><col class="col-label"><col><col><col><col></colgroup>` + plural}</table></div>`;
+    if (only) return `<div class="table-wrap grid-wrap mini"><table class="gtable">${only === 'sg' ? singular : `<caption>${gridTitle(c, 'pl')}</caption><colgroup><col class="col-label"><col><col><col><col></colgroup>` + plural}</table></div>`;
     return `<div class="table-wrap grid-wrap">
       <table class="gtable">${singular}${plural}
       </table>
@@ -519,13 +542,31 @@
     let k = 0;
     return t.cols.map(c => personKey(c.label) || ending(c) || (PLAIN_COL.test(c.label.trim()) ? 'all' : free[k++ % free.length]));
   }
-  const tenseTable = (t, hl, mini) => { const tints = colTints(t); return `<div class="table-wrap grid-wrap ${mini ? 'mini' : ''}">
+  // Phones: with APP.phoneTables === 'by-column', a table whose rows are all persons is also drawn as one small table per column
+  // (-ar, then -er, then -ir), each listing every person with its form. CSS shows these instead of the full table at phone width.
+  const byColumn = t => APP.phoneTables === 'by-column' && t.cols.length > 1 && t.rows.length > 1 && t.rows.every(r => personKey(r.who));
+  function columnBlocks(t, hl, tints) {
+    const verbs = (t.title.split(':')[1] !== undefined ? t.title.split(':')[0] : '').split(/\s*,\s*/);   // "hablar, comer, vivir: ..."
+    const heading = (c, i) => {
+      const label = c.label.toLowerCase(), m = label.match(/^-(ar|er|ir)$/), v = verbs.length === t.cols.length && verbs[i];
+      return m && v && v.toLowerCase().endsWith(m[1]) ? `${label} · ${v}` : label;
+    };
+    return `<div class="by-col">
+      <p class="by-col-title">${esc(t.title)}</p>
+      ${t.cols.map((c, i) => `<table class="ptable">
+        <caption class="g-head t-${tints[i]}">${esc(heading(c, i))}</caption>
+        <tbody>${t.rows.map((r, ri) => `<tr><th scope="row" class="g-label r-${personKey(r.who)}" lang="${APP.lang}">${esc(r.who)}</th>
+          <td class="g-cell t-${tints[i]} ${hl && hl.rows.has(ri) && hl.cols.has(i) ? 'hl' : ''}"><span class="g-form" lang="${APP.lang}">${markEndings(r.cells[i])}</span></td></tr>`).join('')}</tbody>
+      </table>`).join('')}
+    </div>`;
+  }
+  const tenseTable = (t, hl, mini) => { const tints = colTints(t), split = byColumn(t); return `<div class="table-wrap grid-wrap ${mini ? 'mini' : ''}${split ? ' has-by-col' : ''}">
       <table class="gtable tense">
         <caption>${esc(t.title)}</caption>
         <thead><tr><th class="g-label"></th>${t.cols.map((c, i) => `<th scope="col" class="g-head t-${tints[i]}">${esc(c.label.toLowerCase())}</th>`).join('')}</tr></thead>
         <tbody>${t.rows.map((r, ri) => `<tr><th scope="row" class="g-label${personKey(r.who) ? ` r-${personKey(r.who)}` : ''}" lang="${APP.lang}">${esc(r.who)}</th>
           ${r.cells.map((cell, i) => `<td class="g-cell t-${tints[i]} ${hl && hl.rows.has(ri) && hl.cols.has(i) ? 'hl' : ''}" data-col="${esc(t.cols[i].label)}"><span class="g-form" lang="${APP.lang}">${markEndings(cell)}</span></td>`).join('')}</tr>`).join('')}</tbody>
-      </table>
+      </table>${split ? columnBlocks(t, hl, tints) : ''}
     </div>${!mini && t.note ? `<ul class="g-notes"><li>${esc(t.note)}</li></ul>` : ''}`; };
 
   /* ---------- which cells of a verb table a quiz item lands on ---------- */
@@ -799,10 +840,14 @@
   }
 
   /* ---------- quiz ---------- */
+  // this topic's progress records as they are now, to compare with after the quiz
+  const topicRecords = () => Object.fromEntries(Object.entries(progress).filter(([k]) => k.startsWith(`${state.topic.id}|`)));
+  const snapshot = () => JSON.parse(JSON.stringify(topicRecords()));
+
   function startQuiz(items, all = false) {
     const queue = state.order === 'weak' ? orderWeakFirst(items) : shuffle(items);
     if (!all && state.length) queue.length = Math.min(queue.length, state.length);
-    state.quiz = { queue, idx: 0, results: [], revealed: false, checked: false, firstTryRight: false, feedback: null, typed: '' };
+    state.quiz = { queue, idx: 0, results: [], revealed: false, checked: false, firstTryRight: false, feedback: null, typed: '', before: snapshot() };
     saveQuiz();
     setView('quiz');
     scrollToQuiz();
@@ -1088,9 +1133,11 @@
           { n: solved - right, tint: 'loc', label: 'right after another try' },
         ], 'revealed')
       : scoreRing(total, [{ n: right, tint: 'ins', label: 'marked right in your notebook' }], 'marked wrong');
+    const league = leagueCard(q);
     root.innerHTML = `<div class="summary">
       <h2>Quiz finished</h2>
       ${ring}
+      ${league ? league.html : ''}
       ${modes.size > 1 ? '<p>Sentences you marked right in your notebook count as right first time.</p>' : ''}
       ${missed.length ? `<h3>Sentences to look at again</h3>
       <ul class="missed">${missed.map(({ item }) => { const g = state.topic.byId[item.c]; return `<li style="${colour(g.colour)}">
@@ -1102,6 +1149,85 @@
       </div>
     </div>`;
     animateRings(root);
+    if (league) animateLeague(root, league);
+  }
+
+  // The topic's radar chart as a card; null when there is no chart to show (fewer than 3 groups, or no insights.js)
+  function leagueCard(q) {
+    if (typeof INSIGHTS === 'undefined') return null;
+    const scoresOf = items => INSIGHTS.groupScores(INSIGHTS.topicSummary(state.topic, language, items), items);
+    const after = scoresOf(topicRecords());
+    const before = q.before ? scoresOf(q.before) : null;
+    const name = state.topic.en;
+    const svg = INSIGHTS.radarSVG(before || after, { label: name });
+    if (!svg) return null;
+    const change = before ? INSIGHTS.leagueChange(before, after) : null;
+    const shown = change ? change.from : INSIGHTS.radarLeagueFor(after);
+    return {
+      before, after, change, name,
+      html: `<section class="quiz-league league-${shown.id}">
+        <h3>Your ${esc(name)} chart</h3>
+        <p class="league-name">${esc(shown.name)} league</p>
+        ${svg}
+        <p class="league-message" aria-live="polite"></p>
+      </section>`,
+    };
+  }
+
+  // Grow the chart from where it was before the quiz to where it is now, over a dashed outline of the old chart.
+  // It grows at the old zoom first; a promotion then recolours the card while the chart zooms out to the new league.
+  function animateLeague(root, { before, after, change, name }) {
+    const card = $('.quiz-league', root);
+    if (!card || !before) return;
+    const svg = $('svg.radar', card);
+    const message = $('.league-message', card);
+    const text = INSIGHTS.leagueMessage(change, name);
+    const start = INSIGHTS.radarTween(before, after, 0);
+    const ghost = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    ghost.setAttribute('class', 'radar-shape-before');
+    $('.radar-shape-correct', svg).before(ghost);
+    const shapes = [$('.radar-shape-correct', svg), $('.radar-shape', svg)];
+    const hits = [...svg.querySelectorAll('.radar-hit')];
+    const draw = frame => {
+      const f = INSIGHTS.radarShapes(frame);
+      ghost.setAttribute('points', INSIGHTS.radarShapes({ ...start, scale: frame.scale }).correct);   // the old chart zooms with the new one
+      shapes[0].setAttribute('points', f.correct);
+      shapes[1].setAttribute('points', f.mastered);
+      f.vertices.forEach(([x, y], i) => { if (hits[i]) { hits[i].setAttribute('cx', x); hits[i].setAttribute('cy', y); } });
+    };
+    const promote = () => {
+      card.classList.replace(`league-${change.from.id}`, `league-${change.to.id}`);
+      $('.league-name', card).textContent = `${change.to.name} league`;
+      card.classList.add('promoted');
+    };
+    const finish = () => {
+      message.textContent = text;
+      message.classList.add('shown');
+      // the tooltips and screen-reader label describe the final scores
+      const fresh = new DOMParser().parseFromString(INSIGHTS.radarSVG(after, { label: name }), 'image/svg+xml').documentElement;
+      svg.setAttribute('aria-label', fresh.getAttribute('aria-label'));
+      const tips = [...fresh.querySelectorAll('.radar-point')].map(p => p.getAttribute('data-tip'));
+      svg.querySelectorAll('.radar-point').forEach((p, i) => p.setAttribute('data-tip', tips[i]));
+    };
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      draw(INSIGHTS.radarGrowth(before, after, 1));
+      if (change.up) promote();
+      finish();
+      return;
+    }
+    draw(start);
+    const dur = 2000, t0 = performance.now() + 900;   // starts once the score ring has filled
+    const p = INSIGHTS.GROW_PHASE, ease = x => 1 - Math.pow(1 - x, 3);
+    let swapped = false;
+    const tick = now => {
+      if (!card.isConnected) return;
+      const k = Math.min(1, Math.max(0, (now - t0) / dur));
+      // ease the growing and the zooming separately, so each settles before the next begins
+      draw(INSIGHTS.radarGrowth(before, after, k <= p ? p * ease(k / p) : p + (1 - p) * ease((k - p) / (1 - p))));
+      if (change.up && !swapped && k > p) { swapped = true; promote(); }
+      if (k < 1) requestAnimationFrame(tick); else finish();
+    };
+    requestAnimationFrame(tick);
   }
 
   // One ring, one coloured segment per kind of right answer, laid end to end.
@@ -1330,6 +1456,7 @@
       renderQuiz();
     }
     else if (action === 'retry-missed') startQuiz(state.quiz.results.filter(r => !r.right).map(r => r.item), true);
+    else if (action === 'practise-forgotten') practiseForgotten(e.target.closest('[data-action]').dataset.topic);
     else if (action === 'see-sounds') { setView('table'); document.getElementById('ref-sounds')?.scrollIntoView(); }
     else if (action === 'see-table') {
       setView('table');
@@ -1362,12 +1489,19 @@
   ({ topic: state.topic, view: state.view } = readHash());   // a link to a page wins over where you left off
   // an unfinished quiz survives a reload: carry on from the same sentence instead of showing the start screen
   if (state.view === 'quiz') state.quiz = savedQuiz();
+  // #past/forgotten, the account page's practise link: start on the forgotten words now, or once the account's progress arrives
+  let forgottenLink = location.hash.split('/')[1] === 'forgotten' ? state.topic.id : null;
+  const followForgottenLink = () => {
+    if (!forgottenLink || typeof INSIGHTS === 'undefined') return;
+    const group = INSIGHTS.forgottenByTopic(INSIGHTS.forgottenWords(progress, { glosses: wordGlosses })).find(g => g.topic === forgottenLink);
+    if (group) { forgottenLink = null; practiseForgotten(group.topic); }
+  };
   // core/sync.js merges a signed-in account's progress into this browser's, then redraws
   window.blabilingo = {
     progress,
     topics: TOPICS.map(t => t.id),
     saveLocal: () => store.set(`${APP.storagePrefix}.progress`, progress),
-    refresh: () => { renderForgotten(); if (!state.quiz) renderView(); },   // the banner is safe to redraw; never redraw under a question being answered
+    refresh: () => { renderForgotten(); if (!state.quiz) renderView(); followForgottenLink(); },   // the banner is safe to redraw; never redraw under a question being answered
     // topic/group names, colours and glosses to save alongside progress; omitted if insights.js failed to load
     ...(typeof INSIGHTS !== 'undefined' ? { summary: (topicId, items) => INSIGHTS.topicSummary(TOPICS.find(t => t.id === topicId), language, items) } : {}),
   };
@@ -1378,4 +1512,5 @@
   renderFilter();
   renderView();
   renderForgotten();
+  followForgottenLink();
 })();

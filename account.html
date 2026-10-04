@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bona+Nova:ital,wght@0,400;0,700;1,400&family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Cpath fill='%23C1121F' d='M0 0h2v2H0z'/%3E%3Cpath fill='%231D5FBF' d='M2 0h2v2H2z'/%3E%3Cpath fill='%23FFD23F' d='M0 2h2v2H0z'/%3E%3Cpath fill='%231B7A43' d='M2 2h2v2H2z'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="core/styles.css">
+<link rel="stylesheet" href="core/radar.css">
 <link rel="stylesheet" href="core/account.css">
 </head>
 <body>
@@ -81,6 +82,35 @@
     ${statTile(bestStreak, 'best streak')}
   </div>`;
 
+  // Answers per day for the past week; days of a live streak burn red. Counting started in October 2026,
+  // so a week with nothing logged says so instead of showing seven empty bars.
+  function weekChart(week, logged) {
+    const total = week.reduce((sum, d) => sum + d.count, 0);
+    const max = Math.max(1, ...week.map(d => d.count));
+    const hasStreak = week.some(d => d.streak);
+    const label = d => d.today ? 'Today' : d.weekday;
+    const fullDay = d => new Date(`${d.day}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+    const bars = week.map(d => {
+      const tip = `${fullDay(d)}: ${d.count} ${d.count === 1 ? 'answer' : 'answers'}${d.streak ? ' · streak day' : ''}`;
+      return `<li class="week-col${d.streak ? ' is-streak' : ''}${d.today ? ' is-today' : ''}" tabindex="0" data-tip="${esc(tip)}" aria-label="${esc(tip)}">
+        <span class="week-stack" aria-hidden="true">
+          <span class="week-count">${d.count || ''}</span>
+          <span class="week-bar" style="--h: ${(d.count / max) * 100}%"></span>
+        </span>
+        <span class="week-day" aria-hidden="true">${esc(label(d))}</span>
+      </li>`;
+    }).join('');
+    return `<section class="week" aria-labelledby="week-title">
+      <div class="week-head">
+        <h2 id="week-title">This week</h2>
+        <p class="week-total"><b>${total}</b> ${total === 1 ? 'answer' : 'answers'}</p>
+      </div>
+      <ol class="week-bars">${bars}</ol>
+      ${hasStreak ? '<p class="week-legend"><i aria-hidden="true"></i>Streak day</p>' : ''}
+      ${logged ? '' : '<p class="account-note">Counting starts today. Every answer you give from now on shows up here.</p>'}
+    </section>`;
+  }
+
   const practiceTiles = totals => `<div class="stat-tiles">
     ${statTile(totals.answered, 'questions answered')}
     ${statTile(pct(totals.accuracy), 'accuracy')}
@@ -91,9 +121,13 @@
       ${w.gloss ? `<span class="fw-gloss">${esc(w.gloss)}</span>` : ''}
     </li>`;
 
-  function forgottenSection(words, lang) {
+  // Each practise link opens the language page on that topic's forgotten sentences (#topic/forgotten)
+  function forgottenSection(words, lang, entry) {
+    const topicName = id => entry.topics.find(t => t.id === id)?.summary?.topic?.en || capitalize(id);
+    const practise = words.length ? `<p class="forgotten-practise">Practise ${INSIGHTS.forgottenByTopic(words).map(g =>
+      `<a class="btn" href="${esc(entry.id)}/index.html#${esc(g.topic)}/forgotten">${esc(topicName(g.topic))} <span>${g.keys.length} ${g.keys.length === 1 ? 'sentence' : 'sentences'}</span></a>`).join('')}</p>` : '';
     const body = words.length
-      ? `<ul class="forgotten-list">${words.map(w => forgottenChip(w, lang)).join('')}</ul>`
+      ? `<ul class="forgotten-list">${words.map(w => forgottenChip(w, lang)).join('')}</ul>${practise}`
       : '<p class="account-note">Nothing forgotten yet — keep practising and this fills up.</p>';
     return `<section class="forgotten"><h2>Often forgotten</h2>${body}</section>`;
   }
@@ -133,14 +167,15 @@
         <span class="radar-bar-count">${count}<span class="sr-only"> of ${total}</span></span>
       </li>`;
     };
-    return `<article class="radar-card">
+    const league = INSIGHTS.radarLeagueFor(scores);
+    return `<article class="radar-card league-${league.id}">
       <header class="radar-head">
         <h3>${esc(summary.topic.en)} <span class="radar-subtitle">${esc(summary.topic.pl)}</span></h3>
         <p class="radar-total"><b>${total}</b> sentences</p>
       </header>
       ${svg}
       <footer class="radar-foot">
-        ${svg ? `<p class="radar-zoom">At ${Math.round(INSIGHTS.radarScaleFor(scores) * 100)}% zoom</p>` : ''}
+        ${svg ? `<p class="radar-zoom"><span class="radar-league">${league.name} league</span> · At ${Math.round(league.scale * 100)}% zoom</p>` : ''}
         <ul class="radar-legend">${bar('correct', 'Answered right', correct)}${bar('mastered', 'Mastered', mastered)}</ul>
       </footer>
       ${groupTable(scores, !svg)}
@@ -154,7 +189,7 @@
     const tabAttrs = tabbed ? ` role="tabpanel" id="panel-${esc(entry.id)}" aria-labelledby="tab-${esc(entry.id)}"${selected ? '' : ' hidden'}` : '';
     return `<section class="lang-section"${tabAttrs}>
       ${practiceTiles(entry.totals)}
-      ${forgottenSection(entry.forgotten, info.lang)}
+      ${forgottenSection(entry.forgotten, info.lang, entry)}
       <div class="lang-head">
         <h2><span lang="${esc(info.lang)}">${esc(info.app)}</span></h2>
         <a class="link-btn" href="${esc(entry.id)}/index.html">Practise ${esc(info.en)}</a>
@@ -231,9 +266,9 @@
   }
   const hideTip = () => { tip.hidden = true; };
   // pointerenter/focus do not bubble, but capture-phase listeners still see them on the way down
-  document.addEventListener('pointerenter', e => { const p = e.target.closest?.('.radar-point'); if (p) showTip(p); }, true);
-  document.addEventListener('pointerleave', e => { if (e.target.closest?.('.radar-point')) hideTip(); }, true);
-  document.addEventListener('focus', e => { const p = e.target.closest?.('.radar-point'); if (p) showTip(p); }, true);
+  document.addEventListener('pointerenter', e => { const p = e.target.closest?.('[data-tip]'); if (p) showTip(p); }, true);
+  document.addEventListener('pointerleave', e => { if (e.target.closest?.('[data-tip]')) hideTip(); }, true);
+  document.addEventListener('focus', e => { const p = e.target.closest?.('[data-tip]'); if (p) showTip(p); }, true);
   document.addEventListener('blur', () => hideTip(), true);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
 
@@ -264,6 +299,7 @@
     box.innerHTML = `
       ${identityBlock(name, profile, langIds)}
       ${streakTiles(streak, profile.bestStreak || 0)}
+      ${weekChart(INSIGHTS.weekActivity(profile.days, { today, profile }), !!profile.days && Object.keys(profile.days).length > 0)}
       ${progressBlock(model, progressError, selectedId)}
       <p class="account-links"><a class="btn primary" href="${esc(lastPage ? lastPage.href : './')}">Practise</a> <button type="button" class="btn" id="sign-out">Sign out</button></p>`;
 

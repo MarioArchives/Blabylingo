@@ -50,17 +50,51 @@ test('forgottenWords: misses of one base add up across sentences and topics', ()
   assert.deepEqual(new Set(byc.keys), new Set(['past|past-byc|Wczoraj ___ w domu.|być', 'future|future-byc|Jutro ___ w domu.|być']));
 });
 
-test('forgottenWords: a re-learned word (latest sentence streak ≥ 2) is left out', () => {
-  const relearned = {
+test('forgottenWords: a practised word (latest answer right) is left out', () => {
+  const practised = {
     'cases|gen|Nie mam ___.|brat': rec(6, 1, 0, 0, 10),
-    'cases|acc|Widzę ___.|brat': rec(4, 2, 2, 1, 50),       // most recent, right twice in a row
+    'cases|acc|Widzę ___.|brat': rec(3, 1, 1, 1, 50),       // most recent answer was right, once is enough
   };
-  assert.deepEqual(I.forgottenWords(relearned), []);
+  assert.deepEqual(I.forgottenWords(practised), []);
   const slipped = {
-    'cases|gen|Nie mam ___.|brat': rec(6, 3, 2, 1, 10),     // an old streak does not count
+    'cases|gen|Nie mam ___.|brat': rec(6, 3, 2, 1, 10),     // an older right answer does not count
     'cases|acc|Widzę ___.|brat': rec(4, 2, 0, 0, 50),
   };
   assert.equal(I.forgottenWords(slipped).length, 1);
+});
+
+test('forgottenWords: a practised word comes back after another mistake', () => {
+  const progress = { 'cases|gen|Nie mam ___.|brat': rec(3, 1, 1, 1, 10) };   // missed twice, then practised
+  assert.deepEqual(I.forgottenWords(progress), []);
+  progress['cases|gen|Nie mam ___.|brat'] = rec(4, 1, 0, 0, 20);              // wrong again
+  assert.deepEqual(I.forgottenWords(progress).map(w => w.base), ['brat']);
+  progress['cases|acc|Widzę ___.|brat'] = rec(1, 1, 1, 1, 30);                // right on another sentence of the word
+  assert.deepEqual(I.forgottenWords(progress), []);
+});
+
+/* ---------- forgottenByTopic: the practice buttons, one per topic ---------- */
+
+test('forgottenByTopic: groups the missed sentences of forgotten words by topic, biggest first', () => {
+  const words = [
+    { base: 'brat', keys: ['cases|gen|Nie mam ___.|brat', 'cases|nom|To jest ___.|brat'] },
+    { base: 'być', keys: ['past|past-byc|Wczoraj ___ w domu.|być', 'future|future-byc|Jutro ___ w domu.|być'] },
+    { base: 'iść', keys: ['past|past-isc|Wczoraj ___ do kina.|iść'] },
+  ];
+  assert.deepEqual(I.forgottenByTopic(words), [
+    { topic: 'cases', keys: ['cases|gen|Nie mam ___.|brat', 'cases|nom|To jest ___.|brat'], words: ['brat'] },
+    { topic: 'past', keys: ['past|past-byc|Wczoraj ___ w domu.|być', 'past|past-isc|Wczoraj ___ do kina.|iść'], words: ['być', 'iść'] },
+    { topic: 'future', keys: ['future|future-byc|Jutro ___ w domu.|być'], words: ['być'] },
+  ]);
+});
+
+test('forgottenByTopic: ties keep the usual topic order; no words gives []', () => {
+  const words = [
+    { base: 'a', keys: ['future|g|s1|a'] },
+    { base: 'b', keys: ['cases|g|s2|b'] },
+  ];
+  assert.deepEqual(I.forgottenByTopic(words).map(t => t.topic), ['cases', 'future']);
+  assert.deepEqual(I.forgottenByTopic([]), []);
+  assert.deepEqual(I.forgottenByTopic(null), []);
 });
 
 test('forgottenWords: sorted by misses, then most recent; limit respected (default 8)', () => {
@@ -241,11 +275,15 @@ test('radarSVG: fewer than 3 groups gives an empty string', () => {
   assert.equal(I.radarSVG([]), '');
 });
 
-test('radarSVG: one axis and one vertex dot per group', () => {
+test('radarSVG: one axis and one hover target per group, no visible corner dots', () => {
   const svg = I.radarSVG(scoresOf(['A', 'B', 'C', 'D', 'E']));
   assert.match(svg, /^<svg/);
   assert.equal((svg.match(/class="radar-axis"/g) || []).length, 5);
-  assert.equal((svg.match(/class="radar-dot"/g) || []).length, 5);
+  assert.equal((svg.match(/class="radar-point"/g) || []).length, 5);
+  assert.equal((svg.match(/class="radar-hit"/g) || []).length, 5);
+  assert.equal((svg.match(/class="radar-dot"/g) || []).length, 0);
+  assert.equal((svg.match(/class="radar-bg"/g) || []).length, 1);
+  assert.ok(svg.indexOf('radar-bg') < svg.indexOf('radar-ring'));   // background sits under the rings
 });
 
 test('radarSVG: escapes group names and labels every group with its percentage', () => {
@@ -270,27 +308,32 @@ test('radarSVG: draws a correct-answers shape behind the mastered one, never ins
   assert.ok(aria.includes('B 10% mastered, 50% answered right'));
 });
 
-test('radarScale: the smallest step that fits, never below 10% or above 100%', () => {
-  assert.equal(I.radarScale(0), 0.1);
-  assert.equal(I.radarScale(0.1), 0.1);
-  assert.equal(I.radarScale(0.11), 0.25);
-  assert.equal(I.radarScale(0.3), 0.5);
-  assert.equal(I.radarScale(0.9), 1);
-  assert.equal(I.radarScale(1), 1);
+test('radarLeague: bronze to 30%, silver to 70%, gold to 99%, diamond at 100%, in whole percents', () => {
+  const id = v => I.radarLeague(v).id;
+  assert.equal(id(0), 'bronze');
+  assert.equal(id(0.3), 'bronze');
+  assert.equal(id(0.304), 'bronze');
+  assert.equal(id(0.31), 'silver');
+  assert.equal(id(0.7), 'silver');
+  assert.equal(id(0.71), 'gold');
+  assert.equal(id(0.99), 'gold');
+  assert.equal(id(1), 'diamond');
+  assert.deepEqual([0.1, 0.5, 0.9, 1].map(v => I.radarLeague(v).scale), [0.3, 0.7, 1, 1]);
 });
 
-test('radarScaleFor: fits the larger of either share across all groups', () => {
-  assert.equal(I.radarScaleFor([]), 0.1);
-  assert.equal(I.radarScaleFor([{ share: 0.02, correctShare: 0.3 }, { share: 0.05, correctShare: 0.08 }]), 0.5);
-  assert.equal(I.radarScaleFor([{ share: NaN, correctShare: undefined }]), 0.1);
+test('radarLeagueFor: uses the larger of either share across all groups', () => {
+  assert.equal(I.radarLeagueFor([]).id, 'bronze');
+  assert.equal(I.radarLeagueFor([{ share: 0.02, correctShare: 0.4 }, { share: 0.05, correctShare: 0.08 }]).id, 'silver');
+  assert.equal(I.radarLeagueFor([{ share: NaN, correctShare: undefined }]).id, 'bronze');
+  assert.equal(I.radarLeagueFor([{ share: 0.2, correctShare: 1 }, { share: 0, correctShare: 0 }]).id, 'diamond');
 });
 
 test('radarSVG: zooms to the scale and names it for screen readers', () => {
   const scores = scoresOf(['A', 'B', 'C']).map(s => ({ ...s, share: 0.02, correctShare: 0.05 }));
-  scores[0].correctShare = 0.08;   // best share 8% → outer ring is 10%
+  scores[0].correctShare = 0.24;   // best share 24% → bronze, outer ring is 30%
   const svg = I.radarSVG(scores, { label: 'Cases' });
-  assert.match(svg.match(/aria-label="([^"]*)"/)[1], /^Cases, zoomed to 10%/);
-  // the top vertex of the correct shape sits at 8/10 of the radius, not 8/100
+  assert.match(svg.match(/aria-label="([^"]*)"/)[1], /^Cases, Bronze league, zoomed to 30%/);
+  // the top vertex of the correct shape sits at 24/30 of the radius, not 24/100
   const top = svg.match(/class="radar-shape-correct" points="([^"]*)"/)[1].split(' ')[0].split(',').map(Number);
   near(top[0], 0);
   near(top[1], -80);
@@ -377,6 +420,249 @@ test('accountModel: each language carries its own totals and forgotten words, fo
   assert.deepEqual(spanish.forgotten.map(w => w.base), ['hablar']);
   const many = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`cases|g|s${i}|w${i}`, rec(2, 0, 0, 0, i)]));
   assert.equal(I.accountModel([{ id: 'koncowki-cases', data: summaryDoc('polish', 'cases', many) }], { languages: LANGS }).languages[0].forgotten.length, 8);
+});
+
+/* ---------- post-quiz animation: radarTween, radarShapes, leagueChange, leagueMessage ---------- */
+
+const leagueScores = (pairs) => pairs.map(([share, correctShare], i) => ({ ...scoresOf(['A', 'B', 'C', 'D'])[i % 4], id: `g${i}`, share, correctShare }));
+const pointsOf = s => s.split(' ').map(p => p.split(',').map(Number));
+const radius = ([x, y]) => Math.hypot(x, y);
+
+test('radarTween: k=0 is the before chart, k=1 the after chart, k outside 0..1 or NaN is clamped', () => {
+  const before = leagueScores([[0.1, 0.2], [0, 0.1], [0.05, 0.05]]);   // bronze, zoom 0.3
+  const after = leagueScores([[0.3, 0.5], [0.1, 0.2], [0.05, 0.1]]);   // silver, zoom 0.7
+  const start = I.radarTween(before, after, 0);
+  start.shares.forEach((v, i) => near(v, [0.1, 0, 0.05][i]));
+  start.correctShares.forEach((v, i) => near(v, [0.2, 0.1, 0.05][i]));
+  near(start.scale, 0.3);
+  const end = I.radarTween(before, after, 1);
+  end.shares.forEach((v, i) => near(v, [0.3, 0.1, 0.05][i]));
+  end.correctShares.forEach((v, i) => near(v, [0.5, 0.2, 0.1][i]));
+  near(end.scale, 0.7);
+  const mid = I.radarTween(before, after, 0.5);
+  near(mid.shares[0], 0.2); near(mid.correctShares[0], 0.35); near(mid.scale, 0.5);
+  assert.deepEqual(I.radarTween(before, after, -1), start);
+  assert.deepEqual(I.radarTween(before, after, 2), end);
+  assert.deepEqual(I.radarTween(before, after, NaN), start);
+});
+
+test('radarTween: missing before scores (first quiz in a topic) start from an empty bronze chart', () => {
+  const after = leagueScores([[0.1, 0.2], [0, 0.1], [0.05, 0.05]]);
+  for (const before of [null, undefined, []]) {
+    const f = I.radarTween(before, after, 0);
+    assert.deepEqual(f.shares, [0, 0, 0]);
+    assert.deepEqual(f.correctShares, [0, 0, 0]);
+    near(f.scale, 0.3);
+  }
+});
+
+test('radarTween: bad shares are clamped to 0..1 and never give NaN', () => {
+  const before = leagueScores([[NaN, undefined], [-0.5, 2], [0.1, null]]);
+  const after = leagueScores([[0.2, 0.4], [Infinity, 'x'], [0.1, 0.2]]);
+  for (const k of [0, 0.25, 0.5, 1]) {
+    const f = I.radarTween(before, after, k);
+    deepNoNaN(f);
+    [...f.shares, ...f.correctShares].forEach(v => assert.ok(v >= 0 && v <= 1, `${v} in 0..1`));
+    assert.ok(f.scale > 0 && f.scale <= 1);
+  }
+});
+
+test('radarTween: the answered-right shape never sits inside the mastered one at any frame', () => {
+  const before = leagueScores([[0.2, 0.1], [0.1, 0.3], [0, 0]]);     // first group: mastered > correct (bad data)
+  const after = leagueScores([[0.4, 0.5], [0.3, 0.2], [0.1, 0.1]]);
+  for (let k = 0; k <= 1; k += 0.1) {
+    const f = I.radarTween(before, after, k);
+    f.shares.forEach((s, i) => assert.ok(f.correctShares[i] >= s - 1e-9, `k=${k} group ${i}`));
+  }
+});
+
+test('radarShapes: nothing is drawn past the outer ring, even when a share is above the zoom', () => {
+  const shapes = I.radarShapes({ shares: [0.9, 0.2, 0.1], correctShares: [1, 0.5, 0.2], scale: 0.3 });
+  for (const pts of [pointsOf(shapes.mastered), pointsOf(shapes.correct), shapes.vertices]) {
+    pts.forEach(p => assert.ok(radius(p) <= 100 + 0.1, `${p} within radius`));
+  }
+  near(radius(pointsOf(shapes.correct)[0]), 100);
+  assert.equal(shapes.vertices.length, 3);
+});
+
+test('radarShapes: the final frame matches the polygons and hover targets radarSVG draws', () => {
+  const after = leagueScores([[0.3, 0.5], [0.1, 0.2], [0.05, 0.1], [0, 0.4]]);
+  const svg = I.radarSVG(after);
+  const shapes = I.radarShapes(I.radarTween(null, after, 1));
+  assert.equal(svg.match(/class="radar-shape" points="([^"]*)"/)[1], shapes.mastered);
+  assert.equal(svg.match(/class="radar-shape-correct" points="([^"]*)"/)[1], shapes.correct);
+  const hits = [...svg.matchAll(/class="radar-hit" r="16" cx="([^"]*)" cy="([^"]*)"/g)].map(m => [Number(m[1]), Number(m[2])]);
+  assert.equal(hits.length, 4);
+  hits.forEach(([x, y], i) => { near(x, Math.round(shapes.vertices[i][0] * 10) / 10); near(y, Math.round(shapes.vertices[i][1] * 10) / 10); });
+});
+
+test('radarGrowth: grows at the old zoom first, then zooms out to the new league', () => {
+  const before = leagueScores([[0.1, 0.2], [0, 0.1], [0.05, 0.05]]);   // bronze, zoom 0.3
+  const after = leagueScores([[0.3, 0.5], [0.1, 0.2], [0.05, 0.1]]);   // silver, zoom 0.7
+  const start = I.radarGrowth(before, after, 0);
+  assert.deepEqual(start, I.radarTween(before, after, 0));
+  const grown = I.radarGrowth(before, after, I.GROW_PHASE);
+  grown.shares.forEach((v, i) => near(v, [0.3, 0.1, 0.05][i]));
+  grown.correctShares.forEach((v, i) => near(v, [0.5, 0.2, 0.1][i]));
+  near(grown.scale, 0.3);                                              // still at the bronze zoom
+  const halfGrown = I.radarGrowth(before, after, I.GROW_PHASE / 2);
+  near(halfGrown.shares[0], 0.2); near(halfGrown.scale, 0.3);
+  const halfZoomed = I.radarGrowth(before, after, (I.GROW_PHASE + 1) / 2);
+  near(halfZoomed.shares[0], 0.3); near(halfZoomed.scale, 0.5);
+  assert.deepEqual(I.radarGrowth(before, after, 1), I.radarTween(before, after, 1));
+  assert.deepEqual(I.radarGrowth(before, after, 5), I.radarTween(before, after, 1));
+  assert.deepEqual(I.radarGrowth(before, after, NaN), start);
+  assert.ok(I.GROW_PHASE > 0 && I.GROW_PHASE < 1);
+});
+
+test('radarGrowth: within one league the zoom never changes and the whole run is growth', () => {
+  const before = leagueScores([[0.4, 0.5], [0.2, 0.3], [0.1, 0.2]]);   // silver
+  const after = leagueScores([[0.45, 0.6], [0.25, 0.35], [0.1, 0.25]]); // silver
+  for (const k of [0, 0.3, I.GROW_PHASE, 0.9, 1]) near(I.radarGrowth(before, after, k).scale, 0.7);
+  near(I.radarGrowth(before, after, I.GROW_PHASE).correctShares[0], 0.6);
+});
+
+test('leagueChange: same league is not a promotion; one league up and a jump name the new league', () => {
+  const bronze = leagueScores([[0.1, 0.2], [0, 0.1], [0, 0]]);
+  const bronze2 = leagueScores([[0.1, 0.25], [0.05, 0.15], [0, 0.05]]);
+  const silver = leagueScores([[0.2, 0.5], [0, 0.1], [0, 0]]);
+  const gold = leagueScores([[0.5, 0.9], [0, 0.1], [0, 0]]);
+  const same = I.leagueChange(bronze, bronze2);
+  assert.equal(same.from.id, 'bronze'); assert.equal(same.to.id, 'bronze'); assert.equal(same.up, false);
+  const up = I.leagueChange(bronze, silver);
+  assert.equal(up.from.id, 'bronze'); assert.equal(up.to.id, 'silver'); assert.equal(up.up, true);
+  const jump = I.leagueChange(bronze, gold);
+  assert.equal(jump.from.id, 'bronze'); assert.equal(jump.to.id, 'gold'); assert.equal(jump.up, true);
+});
+
+test('leagueChange: no before scores counts as starting in bronze', () => {
+  const silver = leagueScores([[0.2, 0.5], [0, 0.1], [0, 0]]);
+  for (const before of [null, undefined, []]) {
+    const c = I.leagueChange(before, silver);
+    assert.equal(c.from.id, 'bronze'); assert.equal(c.to.id, 'silver'); assert.equal(c.up, true);
+  }
+  assert.equal(I.leagueChange(null, leagueScores([[0, 0.1], [0, 0], [0, 0]])).up, false);
+});
+
+test('leagueChange: a drop is never reported as a promotion', () => {
+  const silver = leagueScores([[0.2, 0.5], [0, 0.1], [0, 0]]);
+  const bronze = leagueScores([[0.1, 0.2], [0, 0.1], [0, 0]]);
+  const c = I.leagueChange(silver, bronze);
+  assert.equal(c.from.id, 'silver'); assert.equal(c.to.id, 'bronze'); assert.equal(c.up, false);
+});
+
+test('leagueChange: losing mastered sentences inside the same (non-bronze) league gives no message', () => {
+  const before = leagueScores([[0.4, 0.5], [0.2, 0.3], [0, 0]]);
+  const after = leagueScores([[0.3, 0.5], [0.1, 0.3], [0, 0]]);   // a wrong answer broke two streaks
+  const c = I.leagueChange(before, after);
+  assert.equal(c.up, false);
+  assert.equal(I.leagueMessage(c, 'Cases'), '');
+});
+
+const leagueOf = id => I.radarLeague({ bronze: 0, silver: 0.5, gold: 0.9, diamond: 1 }[id]);
+const LEAGUE_ORDER = ['bronze', 'silver', 'gold', 'diamond'];
+const change = (from, to) => ({ from: leagueOf(from), to: leagueOf(to), up: LEAGUE_ORDER.indexOf(to) > LEAGUE_ORDER.indexOf(from) });
+
+test('leagueMessage: a promotion names the new league; a jump names only the final one', () => {
+  const silver = I.leagueMessage(change('bronze', 'silver'), 'Cases');
+  assert.ok(silver.includes('Silver'), silver);
+  const gold = I.leagueMessage(change('bronze', 'gold'), 'Cases');
+  assert.ok(gold.includes('Gold') && !gold.includes('Silver'), gold);
+});
+
+test('leagueMessage: ending a quiz in Bronze always gets an encouraging Bronze message', () => {
+  const stay = I.leagueMessage(change('bronze', 'bronze'), 'Cases');
+  assert.ok(stay.includes('Bronze'), stay);
+  assert.equal(I.leagueMessage(change('silver', 'bronze'), 'Cases'), stay);   // a (defensive) drop reads the same
+});
+
+test('leagueMessage: staying in Silver, Gold or Diamond gives no message', () => {
+  for (const id of ['silver', 'gold', 'diamond']) assert.equal(I.leagueMessage(change(id, id), 'Cases'), '');
+  assert.equal(I.leagueMessage(null, 'Cases'), '');
+});
+
+test('leagueMessage: every message is short', () => {
+  for (const [from, to] of [['bronze', 'bronze'], ['bronze', 'silver'], ['silver', 'gold'], ['gold', 'diamond']]) {
+    const msg = I.leagueMessage(change(from, to), 'Future tense');
+    assert.ok(msg.length > 0 && msg.length <= 45, `${msg.length} chars: ${msg}`);
+  }
+});
+
+test('leagueMessage: reaching Diamond has its own wording and names the topic', () => {
+  const gold = I.leagueMessage(change('silver', 'gold'), 'Cases');
+  const diamond = I.leagueMessage(change('gold', 'diamond'), 'Cases');
+  assert.ok(diamond.includes('Diamond') && diamond.includes('Cases'), diamond);
+  assert.notEqual(diamond.replace('Diamond', 'X'), gold.replace('Gold', 'X'));
+});
+
+test('leagueMessage: escapes the topic name', () => {
+  const msg = I.leagueMessage(change('gold', 'diamond'), '<b>"Cases"</b> & co');
+  assert.ok(!msg.includes('<b>'), msg);
+  assert.ok(msg.includes('&lt;b&gt;&quot;Cases&quot;&lt;/b&gt; &amp; co'), msg);
+});
+
+/* ---------- weekActivity: answers per day for the past week, with streak days marked ---------- */
+
+test('weekActivity: seven days oldest first, ending today, with weekday names', () => {
+  const week = I.weekActivity({}, { today: '2026-10-04' });   // a Sunday
+  assert.deepEqual(week.map(d => d.day), ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04']);
+  assert.deepEqual(week.map(d => d.weekday), ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+  assert.deepEqual(week.map(d => d.today), [false, false, false, false, false, false, true]);
+  assert.deepEqual(week.map(d => d.count), [0, 0, 0, 0, 0, 0, 0]);
+});
+
+test('weekActivity: crosses month and year boundaries', () => {
+  const week = I.weekActivity({}, { today: '2027-01-02' });
+  assert.equal(week[0].day, '2026-12-27');
+  assert.equal(week[6].day, '2027-01-02');
+});
+
+test('weekActivity: adds up every language for a day and ignores days outside the week', () => {
+  const days = {
+    '2026-10-04': { polish: 12, spanish: 5 },
+    '2026-10-02': { spanish: 3 },
+    '2026-09-27': { polish: 40 },           // eight days ago
+    '2026-10-05': { polish: 9 },            // tomorrow (another time zone, a wrong clock)
+  };
+  const week = I.weekActivity(days, { today: '2026-10-04' });
+  assert.deepEqual(week.map(d => d.count), [0, 0, 0, 0, 3, 0, 17]);
+});
+
+test('weekActivity: bad counts and malformed days count as 0, never NaN', () => {
+  const days = { '2026-10-04': { polish: NaN, spanish: -4, x: '7', y: 2 }, '2026-10-03': null, '2026-10-02': 5 };
+  const week = I.weekActivity(days, { today: '2026-10-04' });
+  deepNoNaN(week);
+  assert.deepEqual(week.map(d => d.count), [0, 0, 0, 0, 0, 0, 2]);
+  assert.deepEqual(I.weekActivity(null, { today: '2026-10-04' }).map(d => d.count), [0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual(I.weekActivity(undefined, { today: '2026-10-04' }).map(d => d.count), [0, 0, 0, 0, 0, 0, 0]);
+});
+
+test('weekActivity: marks the days of a streak that reaches today', () => {
+  const week = I.weekActivity({}, { today: '2026-10-04', profile: { lastDay: '2026-10-04', streak: 3 } });
+  assert.deepEqual(week.map(d => d.streak), [false, false, false, false, true, true, true]);
+});
+
+test('weekActivity: a streak last extended yesterday is still alive and ends yesterday', () => {
+  const week = I.weekActivity({}, { today: '2026-10-04', profile: { lastDay: '2026-10-03', streak: 2 } });
+  assert.deepEqual(week.map(d => d.streak), [false, false, false, false, true, true, false]);
+});
+
+test('weekActivity: a broken or missing streak marks nothing', () => {
+  for (const profile of [{ lastDay: '2026-10-01', streak: 5 }, { lastDay: null, streak: 0 }, {}, null, undefined]) {
+    const week = I.weekActivity({}, { today: '2026-10-04', profile });
+    assert.ok(week.every(d => !d.streak), JSON.stringify(profile));
+  }
+});
+
+test('weekActivity: a streak longer than a week marks all seven days', () => {
+  const week = I.weekActivity({}, { today: '2026-10-04', profile: { lastDay: '2026-10-04', streak: 30 } });
+  assert.ok(week.every(d => d.streak));
+});
+
+test('weekActivity: streak days with no logged answers stay marked (logging started after the streak)', () => {
+  const week = I.weekActivity({ '2026-10-04': { polish: 6 } }, { today: '2026-10-04', profile: { lastDay: '2026-10-04', streak: 2 } });
+  assert.equal(week[5].count, 0); assert.equal(week[5].streak, true);
+  assert.equal(week[6].count, 6); assert.equal(week[6].streak, true);
 });
 
 /* ---------- regression ---------- */

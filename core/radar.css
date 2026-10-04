@@ -1,0 +1,62 @@
+/* League colours and the radar chart, shared by the account dashboard and the end-of-quiz summary.
+   Uses only the tokens defined in core/styles.css :root. */
+
+/* The two progress colours, shared by the radar shapes and the legend bars */
+/* Each league recolours its card: a darker tone for mastered, a lighter one for answered right, a pale chart background */
+/* --edge is the card border, --league-ink its text: dark enough to read on white and on the tint */
+:root { --mastered: #D4A72C; --correct: #4B6B3F; --tint: var(--linen); --edge: var(--ink); --league-ink: var(--ink); }
+.league-bronze  { --mastered: #8B5A2B; --correct: #C98E5A; --tint: #F5E6D8; --edge: #A06A38; --league-ink: #5E3A17; }
+.league-silver  { --mastered: #5F6772; --correct: #A3ABB6; --tint: #E9ECF0; --edge: #7D8591; --league-ink: #3B424C; }
+.league-gold    { --mastered: #B38A12; --correct: #E2BE4A; --tint: #FAF0CE; --edge: #C99D1C; --league-ink: #6B5000; }
+.league-diamond { --mastered: #1F7FA8; --correct: #7CCBE4; --tint: #DDF1F8; --edge: #2E93BE; --league-ink: #0F4E6A; }
+
+/* Radar chart: no colours set here beyond the design tokens, everything else comes from insights.js's markup */
+.radar { display: block; width: 100%; height: auto; overflow: visible; }
+.radar-bg { fill: var(--tint); }
+.radar-ring { fill: none; stroke: var(--paper); stroke-width: 1.5; }
+.radar-axis { stroke: var(--paper); stroke-width: 1.5; }
+.radar-shape { fill: var(--mastered); fill-opacity: .45; stroke: var(--mastered); stroke-width: 2; stroke-linejoin: round; }
+.radar-shape-correct { fill: var(--correct); fill-opacity: .4; stroke: var(--correct); stroke-width: 2; stroke-linejoin: round; }
+.radar-shape-before { fill: none; stroke: var(--league-ink); stroke-width: 1.5; stroke-dasharray: 4 4; stroke-linejoin: round; opacity: .55; }
+.radar-hit { fill: transparent; pointer-events: all; cursor: pointer; }
+.radar-point:focus-visible .radar-hit { fill: var(--linen); opacity: .5; }
+.radar-point { outline: none; }
+.radar-label { font-family: var(--sans); font-weight: 400; fill: var(--ink-soft); }   /* size comes from radarSVG */
+
+/* Tooltip for a radar point, positioned in script from the point's bounding box */
+.radar-tip {
+  position: fixed; z-index: 20; pointer-events: none;
+  max-width: min(18rem, calc(100vw - 16px));
+  background: var(--ink); color: #fff; padding: .375rem .625rem; border-radius: 2px;
+  font: 400 .875rem/1.35 var(--sans);
+}
+.radar-tip[hidden] { display: none; }
+
+/* A league card, on the account page and at the end of a quiz: the card takes the league's tint, border and lettering,
+   and the chart sits on a white plate so it stands out from the card */
+.quiz-league, .radar-card[class*="league-"] { background: var(--tint); border-color: var(--edge); color: var(--league-ink); }
+.quiz-league h3, .radar-card[class*="league-"] h3 { color: var(--league-ink); }
+.quiz-league .radar-bg, .radar-card[class*="league-"] .radar-bg { fill: var(--paper); }
+.quiz-league .radar-ring, .quiz-league .radar-axis,
+.radar-card[class*="league-"] .radar-ring, .radar-card[class*="league-"] .radar-axis { stroke: var(--tint); }
+.quiz-league .radar-label, .radar-card[class*="league-"] .radar-label { fill: var(--league-ink); }
+
+/* End-of-quiz chart card: the script swaps its league-* class on promotion */
+.quiz-league { margin-top: 2rem; padding: 1.25rem; border: 2px solid var(--edge); border-radius: 2px; text-align: center; }
+.quiz-league h3 { margin: 0; font: 700 1.25rem var(--serif); }
+.quiz-league .league-name { margin: .25rem 0 0; font-weight: 700; }
+.quiz-league .radar { max-width: 22rem; margin: 1rem auto 0; }
+.league-message { margin: .75rem 0 0; font: 700 1.125rem var(--serif); }
+.league-message:empty { margin: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .quiz-league { transition: background-color .6s, border-color .6s, color .6s; }
+  .quiz-league h3 { transition: color .6s; }
+  .quiz-league .radar-bg, .quiz-league .radar-label { transition: fill .6s; }
+  .quiz-league .radar-ring, .quiz-league .radar-axis, .quiz-league .radar-shape-before { transition: stroke .6s; }
+  .quiz-league .radar-shape, .quiz-league .radar-shape-correct { transition: fill .6s, stroke .6s; }
+  .league-message.shown { animation: message-in .6s ease-out; }
+  .quiz-league.promoted { animation: league-pop .7s cubic-bezier(.34, 1.56, .64, 1); }
+}
+@keyframes message-in { from { opacity: 0; transform: translateY(.25rem); } to { opacity: 1; transform: none; } }
+@keyframes league-pop { 0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: scale(1); } }

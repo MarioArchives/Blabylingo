@@ -9,7 +9,7 @@
    that language's data files: polish/ and spanish/ data files define the same globals (SENTENCES, CASES, …), so
    only one language's scripts can be on the page at a time, and the account page needs both at once.
    Answering also marks the day on the profile (users/{uid}), which keeps the streak and the languages practised. */
-import { onUser, ensureProfile, nameOf, pageUrl, db, doc, getDoc, setDoc, runTransaction, arrayUnion, serverTimestamp } from './cloud.js';
+import { onUser, ensureProfile, nameOf, pageUrl, db, doc, getDoc, setDoc, runTransaction, arrayUnion, increment, serverTimestamp } from './cloud.js';
 
 const K = window.blabilingo;          // set by core/app.js
 const box = document.getElementById('account');
@@ -77,14 +77,38 @@ async function markDay() {
 
 const warn = what => err => console.warn(what, err);
 
+// Answers per day for the account page's week chart. Counted in this browser as they happen (signed in or not)
+// and added to the profile's days log on the next save, so answers given while signed out arrive at sign-in.
+const PENDING = `${APP.storagePrefix}.pendingDays`;
+const readPending = () => { try { return JSON.parse(localStorage.getItem(PENDING)) || {}; } catch { return {}; } };
+const writePending = p => { try { localStorage.setItem(PENDING, JSON.stringify(p)); } catch { /* private mode */ } };
+const countAnswer = () => { const p = readPending(), day = dayOf(new Date()); p[day] = (p[day] || 0) + 1; writePending(p); };
+
+async function pushDays() {
+  const sent = readPending();
+  const entries = Object.entries(sent).filter(([, n]) => n > 0);
+  if (!uid || !entries.length) return;
+  const days = Object.fromEntries(entries.map(([day, n]) => [day, { [language]: increment(n) }]));
+  await setDoc(doc(db, 'users', uid), { days }, { merge: true });
+  // take off only what was sent: answers given while the save was in flight stay pending
+  const left = readPending();
+  for (const [day, n] of entries) { left[day] = (left[day] || 0) - n; if (left[day] <= 0) delete left[day]; }
+  writePending(left);
+}
+
 // app.js calls this whenever progress changes (answered is false for a reset); one save per burst of answers
 window.cloudSync = answered => {
+  if (answered) countAnswer();
   if (!uid) return;
   if (answered) markDay().catch(err => { activeDay = null; warn('Saving your streak failed')(err); });
   clearTimeout(timer);
-  timer = setTimeout(() => { timer = null; push().catch(warn('Saving progress to your account failed')); }, 2000);
+  timer = setTimeout(() => {
+    timer = null;
+    push().catch(warn('Saving progress to your account failed'));
+    pushDays().catch(warn('Saving today’s answer count failed'));
+  }, 2000);
 };
-addEventListener('pagehide', () => { if (timer) { clearTimeout(timer); timer = null; push(); } });
+addEventListener('pagehide', () => { if (timer) { clearTimeout(timer); timer = null; push(); pushDays(); } });
 
 onUser(async user => {
   uid = user?.uid ?? null;
@@ -94,6 +118,7 @@ onUser(async user => {
   try {
     renderAccount(user, await ensureProfile(user));
     await pull();
+    await pushDays();
   } catch (err) {
     warn('Could not load your account')(err);
   }

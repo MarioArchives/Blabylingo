@@ -30,7 +30,7 @@ const INSIGHTS = (() => {
       if (miss > 0) w.keyRecs.push({ key, t: r.t });
     }
     return Object.values(byBase)
-      .filter(w => w.misses >= minMisses && !mastered(w.latest))  // a right-twice streak on the latest sentence clears it
+      .filter(w => w.misses >= minMisses && w.latest?.last !== 1)  // answering it right clears it; the next mistake brings it back
       .sort((a, b) => b.misses - a.misses || b.t - a.t)
       .slice(0, limit)
       .map(w => ({
@@ -41,6 +41,18 @@ const INSIGHTS = (() => {
         t: w.t,
         keys: w.keyRecs.sort((a, b) => b.t - a.t).map(k => k.key),
       }));
+  };
+
+  // The forgotten words' missed sentences, one group per topic (a quiz runs inside one topic): most sentences first.
+  const forgottenByTopic = words => {
+    const byTopic = new Map();
+    for (const w of words || []) for (const key of w.keys) {
+      const { topic } = parseKey(key);
+      const t = byTopic.get(topic) || byTopic.set(topic, { topic, keys: [], words: [] }).get(topic);
+      t.keys.push(key);
+      if (!t.words.includes(w.base)) t.words.push(w.base);
+    }
+    return [...byTopic.values()].sort((a, b) => b.keys.length - a.keys.length || topicCompare(a.topic, b.topic));
   };
 
   const groupScores = (summary, items) => {
@@ -96,6 +108,22 @@ const INSIGHTS = (() => {
     return Number.isFinite(profile.streak) ? profile.streak : 0;
   };
 
+  // The past seven days, oldest first: answers per day (every language added up) from the profile's
+  // days log ({ 'YYYY-MM-DD': { polish: 12, … } }), and which days belong to a streak that is still alive.
+  const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekActivity = (days, { today, profile } = {}) => {
+    const list = [today];
+    while (list.length < 7) list.unshift(previousDay(list[0]));
+    const streakDays = new Set();
+    const streak = currentStreak(profile, today);
+    for (let d = profile?.lastDay, i = 0; streak > 0 && i < Math.min(streak, 7); i++, d = previousDay(d)) streakDays.add(d);
+    return list.map(day => {
+      const byLang = days && typeof days[day] === 'object' && days[day] ? days[day] : {};
+      const count = Object.values(byLang).reduce((sum, n) => sum + (Number.isFinite(n) && n > 0 ? n : 0), 0);
+      return { day, weekday: WEEKDAYS[new Date(`${day}T00:00:00Z`).getUTCDay()], count, today: day === today, streak: streakDays.has(day) };
+    });
+  };
+
   const totals = items => {
     let answered = 0, right = 0;
     for (const r of Object.values(items || {})) {
@@ -116,12 +144,21 @@ const INSIGHTS = (() => {
     return axisPoint(values.length, i, radius * clamped, cx, cy);
   });
 
-  // The outer ring's value: the smallest step that fits the best 'answered right' share,
-  // so early progress fills the chart and it zooms out in steps (not every answer) as you improve.
-  const RADAR_STEPS = [0.1, 0.25, 0.5, 1];
-  const radarScale = maxShare => RADAR_STEPS.find(step => maxShare <= step + 1e-9) || 1;
+  // Leagues come from the best group's share (whichever of mastered or answered right is higher),
+  // counted in whole percents. Each league zooms the chart so its outer ring is the league's top,
+  // so early progress fills the chart and it zooms out a league at a time as you improve.
+  const RADAR_LEAGUES = [
+    { id: 'bronze', name: 'Bronze', upTo: 30, scale: 0.3 },
+    { id: 'silver', name: 'Silver', upTo: 70, scale: 0.7 },
+    { id: 'gold', name: 'Gold', upTo: 99, scale: 1 },
+    { id: 'diamond', name: 'Diamond', upTo: 100, scale: 1 },
+  ];
   const clampShare = v => Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0;
-  const radarScaleFor = scores => radarScale(Math.max(0, ...(scores || []).map(s => Math.max(clampShare(s.share), clampShare(s.correctShare)))));
+  const radarLeague = maxShare => {
+    const pct = Math.round(clampShare(maxShare) * 100);
+    return RADAR_LEAGUES.find(l => pct <= l.upTo);
+  };
+  const radarLeagueFor = scores => radarLeague(Math.max(0, ...(scores || []).map(s => Math.max(clampShare(s.share), clampShare(s.correctShare)))));
 
   // Every chart uses the same frame, so shapes are the same size whatever the group count or names.
   // It leaves room for a label of LABEL_CHARS at the end of any axis; longer names are squeezed to fit.
@@ -135,39 +172,95 @@ const INSIGHTS = (() => {
     return `${-x} ${-top} ${2 * x} ${top + bottom}`;
   })();
 
+  // Clamped shares per group; answered right is never below mastered, so its shape never sits inside.
+  const radarEnds = scores => {
+    const shares = scores.map(s => clampShare(s.share));
+    return { shares, correctShares: scores.map((s, i) => Math.max(shares[i], clampShare(s.correctShare))) };
+  };
+
+  // Polygons and mastered-shape vertices for one frame: radius is share over the league zoom, capped at the outer ring.
+  const radarShapes = ({ shares, correctShares, scale }) => {
+    const n = shares.length, round = v => Math.round(v * 10) / 10;
+    const pts = vals => vals.map((v, i) => axisPoint(n, i, RADAR_R * Math.min(1, v / scale), 0, 0));
+    const attr = ps => ps.map(([x, y]) => `${round(x)},${round(y)}`).join(' ');
+    const vertices = pts(shares);
+    return { mastered: attr(vertices), correct: attr(pts(correctShares)), vertices };
+  };
+
+  // A frame between two quizzes' charts (k 0 = before, 1 = after). A missing before is an empty bronze chart.
+  const radarTween = (beforeScores, afterScores, k) => {
+    const t = Number.isFinite(k) ? Math.min(1, Math.max(0, k)) : 0;
+    const after = afterScores || [];
+    const hasBefore = beforeScores && beforeScores.length;
+    const a = radarEnds(after);
+    const b = hasBefore ? radarEnds(beforeScores) : { shares: after.map(() => 0), correctShares: after.map(() => 0) };
+    const mix = (x, y) => x + (y - x) * t;
+    return {
+      shares: a.shares.map((v, i) => mix(b.shares[i] ?? 0, v)),
+      correctShares: a.correctShares.map((v, i) => mix(b.correctShares[i] ?? 0, v)),
+      scale: mix(radarLeagueFor(hasBefore ? beforeScores : []).scale, radarLeagueFor(after).scale),
+    };
+  };
+
+  // The after-quiz animation in two steps, so the growth shows even when the league changes:
+  // up to GROW_PHASE the shapes grow at the old zoom (capped at the outer ring), then the chart zooms out to the new league.
+  const GROW_PHASE = 0.6;
+  const radarGrowth = (beforeScores, afterScores, k) => {
+    const t = Number.isFinite(k) ? Math.min(1, Math.max(0, k)) : 0;
+    const scaleAt = x => radarTween(beforeScores, afterScores, x).scale;
+    if (t <= GROW_PHASE) return { ...radarTween(beforeScores, afterScores, t / GROW_PHASE), scale: scaleAt(0) };
+    return { ...radarTween(beforeScores, afterScores, 1), scale: scaleAt((t - GROW_PHASE) / (1 - GROW_PHASE)) };
+  };
+
+  const leagueChange = (beforeScores, afterScores) => {
+    const from = radarLeagueFor(beforeScores), to = radarLeagueFor(afterScores);
+    return { from, to, up: RADAR_LEAGUES.indexOf(to) > RADAR_LEAGUES.indexOf(from) };
+  };
+
+  // Short and cheerful: a promotion names only the league reached, and any quiz that ends in Bronze gets a nudge.
+  const LEAGUE_MESSAGES = {
+    bronze: () => 'Bronze league. Keep climbing!',
+    silver: () => 'Up to Silver! Nice work.',
+    gold: () => 'Gold! You are on a roll.',
+    diamond: topic => `Diamond! You have mastered ${topic}.`,
+  };
+  const leagueMessage = (change, topicName) => {
+    if (!change || !(change.up || change.to.id === 'bronze')) return '';
+    return LEAGUE_MESSAGES[change.to.id](esc(topicName));
+  };
+
   const radarSVG = (scores, { label = '' } = {}) => {
     if (!scores || scores.length < 3) return '';
     const n = scores.length;
     const r = RADAR_R, cx = 0, cy = 0;
     const round = v => Math.round(v * 10) / 10;
     const pointsAttr = pts => pts.map(([x, y]) => `${round(x)},${round(y)}`).join(' ');
-    const shares = scores.map(s => clampShare(s.share));
-    const correctShares = scores.map((s, i) => Math.max(shares[i], clampShare(s.correctShare)));  // never inside the mastered shape
-    const scale = radarScaleFor(scores);
-    const scaled = v => Math.min(1, v / scale);
+    const { shares, correctShares } = radarEnds(scores);
+    const league = radarLeagueFor(scores), scale = league.scale;
+    const shapes = radarShapes({ shares, correctShares, scale });
 
     const rings = [0.25, 0.5, 0.75, 1].map(frac => {
       const pts = Array.from({ length: n }, (_, i) => axisPoint(n, i, r * frac, cx, cy));
       return `<polygon class="radar-ring" points="${pointsAttr(pts)}"/>`;
     }).join('');
 
+    const bgPts = Array.from({ length: n }, (_, i) => axisPoint(n, i, r, cx, cy));
+    const background = `<polygon class="radar-bg" points="${pointsAttr(bgPts)}"/>`;
+
     const axes = scores.map((_, i) => {
       const [x, y] = axisPoint(n, i, r, cx, cy);
       return `<line class="radar-axis" x1="${round(cx)}" y1="${round(cy)}" x2="${round(x)}" y2="${round(y)}"/>`;
     }).join('');
 
-    const shapePts = shares.map((share, i) => axisPoint(n, i, r * scaled(share), cx, cy));
-    const shape = `<polygon class="radar-shape" points="${pointsAttr(shapePts)}"/>`;
-    const correctPts = correctShares.map((share, i) => axisPoint(n, i, r * scaled(share), cx, cy));
-    const correctShape = `<polygon class="radar-shape-correct" points="${pointsAttr(correctPts)}"/>`;
+    const shape = `<polygon class="radar-shape" points="${shapes.mastered}"/>`;
+    const correctShape = `<polygon class="radar-shape-correct" points="${shapes.correct}"/>`;
 
     const points = scores.map((s, i) => {
-      const [x, y] = shapePts[i];
+      const [x, y] = shapes.vertices[i];
       const acc = s.accuracy == null ? 'not practised yet' : `${Math.round(s.accuracy * 100)}% right`;
       const tip = esc(`${s.en}: ${s.mastered} of ${s.total} mastered · ${s.correct || 0} answered right · ${acc}`);
       return `<g class="radar-point" tabindex="0" data-tip="${tip}">`
-        + `<circle class="radar-hit" r="16" cx="${round(x)}" cy="${round(y)}"/>`
-        + `<circle class="radar-dot" r="5" cx="${round(x)}" cy="${round(y)}"/></g>`;
+        + `<circle class="radar-hit" r="16" cx="${round(x)}" cy="${round(y)}"/></g>`;
     }).join('');
 
     // Short names at each axis end; anything wider than the frame allows is squeezed
@@ -180,10 +273,10 @@ const INSIGHTS = (() => {
         + `><title>${esc(s.pl)}</title>${esc(text)}</text>`;
     }).join('');
 
-    const aria = `${esc(label)}, zoomed to ${Math.round(scale * 100)}%: ${scores.map((s, i) => `${esc(s.pl)} ${Math.round(shares[i] * 100)}% mastered, ${Math.round(correctShares[i] * 100)}% answered right`).join(', ')}`;
+    const aria = `${esc(label)}, ${league.name} league, zoomed to ${Math.round(scale * 100)}%: ${scores.map((s, i) => `${esc(s.pl)} ${Math.round(shares[i] * 100)}% mastered, ${Math.round(correctShares[i] * 100)}% answered right`).join(', ')}`;
 
     return `<svg class="radar" viewBox="${RADAR_VIEWBOX}" role="img" aria-label="${aria}">`
-      + `${rings}${axes}${correctShape}${shape}${points}${labels}</svg>`;
+      + `${background}${rings}${axes}${correctShape}${shape}${points}${labels}</svg>`;
   };
 
   const TOPIC_ORDER = ['cases', 'present', 'past', 'future', 'numbers', 'idioms'];
@@ -247,15 +340,23 @@ const INSIGHTS = (() => {
   return {
     parseKey,
     forgottenWords,
+    forgottenByTopic,
     groupScores,
     topicSummary,
     previousDay,
     currentStreak,
+    weekActivity,
     totals,
     radarPoints,
-    radarScale,
-    radarScaleFor,
+    radarLeague,
+    radarLeagueFor,
     radarSVG,
+    radarTween,
+    radarShapes,
+    radarGrowth,
+    GROW_PHASE,
+    leagueChange,
+    leagueMessage,
     accountModel,
   };
 })();

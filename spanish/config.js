@@ -6,5 +6,6 @@ const APP = {
   letters: ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü', '¿', '¡'],
   marks: 'á, é, ñ or ü',
   storagePrefix: 'terminaciones',
+  phoneTables: 'by-column',   // phone-width verb tables: one block per column (-ar, -er, -ir) listing every person
   stripMarks: s => s.normalize('NFD').replace(/[̀-ͯ]/g, ''),
 };

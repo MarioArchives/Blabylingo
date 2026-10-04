@@ -3,7 +3,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, runTransaction, arrayUnion, serverTimestamp, collection, getDocs }
+import { getFirestore, doc, getDoc, setDoc, runTransaction, arrayUnion, increment, serverTimestamp, collection, getDocs }
   from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-lite.js';   // plain requests: ad blockers stop the full SDK's live channel
 import { firebaseConfig } from '../firebase-config.js';
 
@@ -36,6 +36,7 @@ export const signOutUser = () => signOut(auth);
      languages    the languages practised, by folder id: ['polish', 'spanish']
      lastDay      the last day with an answer, 'YYYY-MM-DD' in the learner's own time zone
      streak       days in a row with an answer, ending on lastDay; bestStreak is the longest so far
+     days         answers per day and language, logged from October 2026 on: { '2026-10-04': { polish: 12, spanish: 3 } }
    Which questions were answered, and which were wrong, lives in users/{uid}/progress (see core/sync.js). */
 export async function ensureProfile(user) {
   const ref = doc(db, 'users', user.uid);
@@ -52,4 +53,4 @@ export async function ensureProfile(user) {
 // displayName is what the first accounts stored before username
 export const nameOf = (profile, user) => profile.username || profile.displayName || user.displayName || user.email || 'Your account';
 
-export { doc, getDoc, setDoc, runTransaction, arrayUnion, serverTimestamp, collection, getDocs };
+export { doc, getDoc, setDoc, runTransaction, arrayUnion, increment, serverTimestamp, collection, getDocs };
