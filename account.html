@@ -76,15 +76,10 @@
 
   const statTile = (value, label) => `<div class="stat-tile"><span class="stat-num">${esc(value)}</span><span class="stat-label">${esc(label)}</span></div>`;
 
-  // A streak counts answers in any language, so it sits above the language switch
-  const streakTiles = (streak, bestStreak) => `<div class="stat-tiles">
-    ${statTile(streak, 'days in a row')}
-    ${statTile(bestStreak, 'best streak')}
-  </div>`;
-
-  // Answers per day for the past week; days of a live streak burn red. Counting started in October 2026,
-  // so a week with nothing logged says so instead of showing seven empty bars.
-  function weekChart(week, logged) {
+  // The week card: the live streak up top (it counts answers in any language, so it sits above the language
+  // switch), then answers per day for the past week; days of a live streak burn red. Counting started in
+  // October 2026, so a week with nothing logged says so instead of showing seven empty bars.
+  function weekChart(week, logged, streak, bestStreak) {
     const total = week.reduce((sum, d) => sum + d.count, 0);
     const max = Math.max(1, ...week.map(d => d.count));
     const hasStreak = week.some(d => d.streak);
@@ -102,8 +97,14 @@
     }).join('');
     return `<section class="week" aria-labelledby="week-title">
       <div class="week-head">
-        <h2 id="week-title">This week</h2>
-        <p class="week-total"><b>${total}</b> ${total === 1 ? 'answer' : 'answers'}</p>
+        <div class="week-lead">
+          <h2 id="week-title">This week</h2>
+          <p class="week-streak${streak > 0 ? ' is-live' : ''}"><i class="week-flame" aria-hidden="true"></i><span class="week-streak-num">${esc(streak)}</span><span class="week-streak-label">${streak === 1 ? 'day' : 'days'} in a row</span></p>
+        </div>
+        <dl class="week-figures">
+          <div class="week-figure"><dt>Best streak</dt><dd><b>${esc(bestStreak)}</b> ${bestStreak === 1 ? 'day' : 'days'}</dd></div>
+          <div class="week-figure"><dt>Past 7 days</dt><dd><b>${total}</b> ${total === 1 ? 'answer' : 'answers'}</dd></div>
+        </dl>
       </div>
       <ol class="week-bars">${bars}</ol>
       ${hasStreak ? '<p class="week-legend"><i aria-hidden="true"></i>Streak day</p>' : ''}
@@ -298,8 +299,7 @@
 
     box.innerHTML = `
       ${identityBlock(name, profile, langIds)}
-      ${streakTiles(streak, profile.bestStreak || 0)}
-      ${weekChart(INSIGHTS.weekActivity(profile.days, { today, profile }), !!profile.days && Object.keys(profile.days).length > 0)}
+      ${weekChart(INSIGHTS.weekActivity(profile.days, { today, profile }), !!profile.days && Object.keys(profile.days).length > 0, streak, profile.bestStreak || 0)}
       ${progressBlock(model, progressError, selectedId)}
       <p class="account-links"><a class="btn primary" href="${esc(lastPage ? lastPage.href : './')}">Practise</a> <button type="button" class="btn" id="sign-out">Sign out</button></p>`;
 

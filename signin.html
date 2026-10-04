@@ -9,17 +9,97 @@
 <link href="https://fonts.googleapis.com/css2?family=Bona+Nova:ital,wght@0,400;0,700;1,400&family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Cpath fill='%23C1121F' d='M0 0h2v2H0z'/%3E%3Cpath fill='%231D5FBF' d='M2 0h2v2H2z'/%3E%3Cpath fill='%23FFD23F' d='M0 2h2v2H0z'/%3E%3Cpath fill='%231B7A43' d='M2 2h2v2H2z'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="core/styles.css">
+<style>
+  .signin-masthead { padding-bottom: 0; max-width: calc(52.5rem + 2 * clamp(1rem, 4vw, 2.5rem)); }
+  .signin-masthead .languages { margin-bottom: 0; }
+  .signin-page {
+    display: grid; gap: clamp(1.75rem, 4vw, 3.5rem); align-items: center;
+    grid-template-columns: minmax(0, 27rem) minmax(0, 22rem); justify-content: center;
+    padding-top: clamp(1.5rem, 5vw, 3.5rem);
+  }
+  @media (max-width: 47.99rem) {
+    .signin-masthead { max-width: calc(30rem + 2 * clamp(1rem, 4vw, 2.5rem)); }
+    .signin-page { grid-template-columns: minmax(0, 1fr); max-width: calc(30rem + 2 * clamp(1rem, 4vw, 2.5rem)); padding-bottom: 3.5rem; }
+  }
+
+  /* The card */
+  .signin-card {
+    display: grid; gap: 1.25rem; justify-items: start;
+    padding: clamp(1.5rem, 5vw, 2.5rem);
+    background: var(--paper); border-radius: var(--radius-card); box-shadow: var(--shadow-soft);
+    animation: signin-rise .45s ease-out both;
+  }
+  @keyframes signin-rise { from { opacity: 0; transform: translateY(8px); } }
+  @media (prefers-reduced-motion: reduce) { .signin-card { animation: none; } }
+
+  .brand-mark { display: grid; grid-template-columns: repeat(2, .75rem); gap: 3px; }
+  .brand-mark i { width: .75rem; height: .75rem; border-radius: 3px; }
+  .brand-mark i:nth-child(1) { background: #C1121F; }
+  .brand-mark i:nth-child(2) { background: #1D5FBF; }
+  .brand-mark i:nth-child(3) { background: #FFD23F; }
+  .brand-mark i:nth-child(4) { background: #1B7A43; }
+
+  .signin-card h1 { font: 700 clamp(2.5rem, 8vw, 3.25rem)/1 var(--serif); letter-spacing: -0.02em; }
+  .signin-pitch { color: var(--ink-soft); margin-top: -.5rem; }
+
+  /* sample endings, marked the way the tables mark them */
+  .signin-samples {
+    display: flex; flex-wrap: wrap; gap: .375rem .5rem; margin: 0; padding: 0; list-style: none;
+    font: 400 1.125rem/1.3 var(--serif);
+  }
+  .signin-samples li { padding: .25rem .75rem; background: var(--linen); border-radius: var(--radius-pill); }
+  .signin-samples b { font-weight: 700; color: var(--ending); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+
+  .signin-actions { display: grid; gap: 1rem; justify-items: start; width: 100%; padding-top: 1.25rem; border-top: 1px solid var(--rule); }
+  .signin-actions .account-note { font-size: .9375rem; }
+  .signin-actions .account-error { font-size: .9375rem; padding: .625rem .875rem; background: #FBEDEE; border-radius: var(--radius-sm); }
+  .signin-actions .btn { border-radius: var(--radius-pill); padding-inline: 1.375rem; }
+  .signin-who b { font-weight: 700; }
+
+  .signin-guide { font-size: .9375rem; color: var(--ink-soft); }
+  .signin-guide a { color: var(--ink); font-weight: 700; text-underline-offset: 3px; }
+
+  /* What an account gives you */
+  .signin-perks h2 { font: 700 1.625rem/1.15 var(--serif); margin-bottom: 1.125rem; }
+  .signin-perks ul { display: grid; gap: 1rem; margin: 0; padding: 0; list-style: none; }
+  .signin-perks li { display: grid; grid-template-columns: .75rem 1fr; gap: .875rem; align-items: baseline; }
+  .signin-perks li::before { content: ''; width: .75rem; height: .75rem; border-radius: 3px; background: var(--c); transform: translateY(.05em); }
+  .signin-perks li:nth-child(1) { --c: #C1121F; }
+  .signin-perks li:nth-child(2) { --c: #1D5FBF; }
+  .signin-perks li:nth-child(3) { --c: #FFD23F; }
+  .signin-perks li:nth-child(4) { --c: #1B7A43; }
+  .signin-perks b { display: block; font-weight: 700; }
+  .signin-perks span { display: block; color: var(--ink-soft); font-size: .9375rem; }
+</style>
 </head>
 <body>
-<header class="masthead">
+<header class="masthead signin-masthead">
   <div class="masthead-bar"><nav class="languages" aria-label="Site"><a href="./">← Blabilingo</a></nav></div>
-  <h1>Sign in</h1>
-  <p class="lede">Sign in to keep your progress on every device. The first time you sign in with Google, your Blabilingo account is created.</p>
 </header>
-<main>
-  <section id="signin" class="account-card" aria-live="polite">
-    <p class="account-note">Loading…</p>
+<main class="signin-page">
+  <section class="signin-card" aria-labelledby="signin-title">
+    <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <h1 id="signin-title">Sign in</h1>
+    <p class="signin-pitch">Keep your progress on every device. The first time you sign in with Google, your Blabilingo account is created.</p>
+    <ul class="signin-samples" aria-label="Sample endings">
+      <li lang="pl">mam kot<b>a</b></li>
+      <li lang="pl">w dom<b>u</b></li>
+      <li lang="es">habl<b>o</b></li>
+    </ul>
+    <div id="signin" class="signin-actions" aria-live="polite">
+      <p class="account-note">Loading…</p>
+    </div>
+    <p class="signin-guide">New here? <a href="guide.html">Read the guide</a></p>
   </section>
+  <aside class="signin-perks" aria-labelledby="perks-title">
+    <h2 id="perks-title">With an account</h2>
+    <ul>
+      <li><p><b>Progress on every device</b><span>Pick up on your phone where you stopped on your laptop.</span></p></li>
+      <li><p><b>A streak and a this-week chart</b><span>See how many days in a row you have practised.</span></p></li>
+      <li><p><b>Radar charts per topic</b><span>Climb from Bronze to Silver, Gold and Diamond.</span></p></li>
+      <li><p><b>Often-forgotten words</b><span>A list of the words you miss most, ready to practise.</span></p></li>
+    </ul>
+  </aside>
 </main>
 <script>
   // Sign-in needs the site served over http: modules and Google's popup do not work from file://
@@ -60,7 +140,7 @@
   const user = await currentUser();
   if (user) {
     const profile = await ensureProfile(user).catch(() => ({}));
-    box.innerHTML = `<p>You are signed in as <b>${esc(profile.displayName || user.displayName || user.email)}</b>.</p>
+    box.innerHTML = `<p class="signin-who">You are signed in as <b>${esc(profile.displayName || user.displayName || user.email)}</b>.</p>
       <p class="account-links"><a class="btn primary" href="account.html">Your account</a> <a class="btn" href="./">Practise</a></p>`;
   } else showSignIn();
 </script>
