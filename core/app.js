@@ -171,7 +171,7 @@
       topic: state.topic.id, idx: q.idx,
       queue: q.queue.map(s => keyOf(state.topic, s)),
       results: q.results.map(r => ({ key: keyOf(state.topic, r.item), right: r.right, solved: r.solved, mode: r.mode })),
-      revealed: q.revealed, checked: q.checked, firstTryRight: q.firstTryRight, feedback: q.feedback, typed: q.typed,
+      revealed: q.revealed, checked: q.checked, firstTryRight: q.firstTryRight, feedback: q.feedback, typed: q.typed, partial: q.partial || null,
       before: q.before,
     });
   }
@@ -183,7 +183,7 @@
     if (queue.length !== r.queue.length || r.idx >= queue.length) return null;
     return {
       queue, idx: r.idx, results: r.results.map(x => ({ item: byKey[x.key], right: x.right, solved: x.solved ?? x.right, mode: x.mode })).filter(x => x.item),
-      revealed: !!r.revealed, checked: !!r.checked, firstTryRight: !!r.firstTryRight, feedback: r.feedback || null, typed: r.typed || '',
+      revealed: !!r.revealed, checked: !!r.checked, firstTryRight: !!r.firstTryRight, feedback: r.feedback || null, typed: r.typed || '', partial: r.partial || null,
       before: r.before || undefined,
     };
   }
@@ -197,6 +197,26 @@
 
   const normalise = s => s.toLocaleLowerCase(APP.lang).replace(/[.,!?;:]/g, ' ').replace(/\s+/g, ' ').trim();
   const stripMarks = APP.stripMarks;
+
+  // Answers of more than one word are checked word by word. A right word counts once and stays right, and the
+  // sentence is right when all of them are. Typing every word checks them place by place; typing fewer checks
+  // them against the words still missing. Returns { ai, done, n } for the answer the guess gets closest to.
+  function matchWords(answers, guess, partial) {
+    const words = guess.split(' ');
+    let best = null;
+    answers.forEach((a, ai) => {
+      const want = a.split(' ');
+      if (want.length < 2) return;
+      const done = partial && partial.ai === ai && partial.done.length === want.length ? partial.done.slice() : want.map(() => false);
+      if (words.length === want.length) words.forEach((w, i) => { if (w === want[i]) done[i] = true; });
+      else words.forEach(w => { const i = want.findIndex((x, j) => !done[j] && x === w); if (i >= 0) done[i] = true; });
+      const n = done.filter(Boolean).length;
+      if (!best || n > best.n) best = { ai, done, n };
+    });
+    return best;
+  }
+  const capitalize = w => w.charAt(0).toLocaleUpperCase(APP.lang) + w.slice(1);
+  const answerWords = (item, ai) => item.a[ai].trim().split(/\s+/);
 
   // "Nie{not} mam{I have} ___." -> [{word, gloss} | {gap} | {punct}]
   function parseSentence(src) {
@@ -847,7 +867,7 @@
   function startQuiz(items, all = false) {
     const queue = state.order === 'weak' ? orderWeakFirst(items) : shuffle(items);
     if (!all && state.length) queue.length = Math.min(queue.length, state.length);
-    state.quiz = { queue, idx: 0, results: [], revealed: false, checked: false, firstTryRight: false, feedback: null, typed: '', before: snapshot() };
+    state.quiz = { queue, idx: 0, results: [], revealed: false, checked: false, firstTryRight: false, feedback: null, typed: '', partial: null, before: snapshot() };
     saveQuiz();
     setView('quiz');
     scrollToQuiz();
@@ -867,10 +887,20 @@
     return GENDERS[noun] + (item.hint === 'plural' || PLURAL_ONLY.includes(noun) ? '.pl' : '');
   }
 
-  function sentenceHTML(item, revealed) {
+  // the gap's words: the ones already right in the answer's form, the rest still as given (or … if the counts differ)
+  function partialGap(item, partial) {
+    const right = answerWords(item, partial.ai), given = item.base.trim().split(/\s+/);
+    return right.map((w, i) => partial.done[i] ? `<b class="part-right">${esc(w)}</b>`
+      : `<span class="part-left">${esc(given.length === right.length ? given[i] : '…')}</span>`).join(' ');
+  }
+
+  function sentenceHTML(item, revealed, partial) {
     return joinTokens(parseSentence(item.s), tok => {
       if (tok.punct) return esc(tok.punct);
       if (tok.gap) {
+        if (!revealed && partial) {
+          return `<span class="slot part" tabindex="0" data-gloss="${esc(item.gloss)}" ${gapTag(item) ? `data-tag="${gapTag(item)}"` : ''} data-say="${esc(item.base.replace(/\s*\/\s*/g, ', '))}">${partialGap(item, partial)}${shortHint(item) ? `<small>${esc(shortHint(item))}</small>` : ''}</span>`;
+        }
         return revealed
           ? `<span class="slot filled" tabindex="0" data-gloss="${esc(item.gloss)}" ${gapTag(item) ? `data-tag="${gapTag(item)}"` : ''} data-say="${esc(item.a[0])}">${esc(item.a[0])}</span>`
           : `<span class="slot" tabindex="0" data-gloss="${esc(item.gloss)}" ${gapTag(item) ? `data-tag="${gapTag(item)}"` : ''} data-say="${esc(item.base.replace(/\s*\/\s*/g, ', '))}">${esc(item.base)}${shortHint(item) ? `<small>${esc(shortHint(item))}</small>` : ''}</span>`;
@@ -993,7 +1023,7 @@
         ? `<b lang="${APP.lang}">${esc(g.pl)}</b><i lang="${APP.lang}">${esc(g.q)}</i><span>${esc(g.en)}</span>`
         : `<span>Which ${t.unit} is it? Work it out from the sentence.</span>`}</div>
 
-      <p class="sentence" lang="${APP.lang}">${sentenceHTML(item, q.revealed)}</p>
+      <p class="sentence" lang="${APP.lang}">${sentenceHTML(item, q.revealed, q.partial)}</p>
       ${(() => { const r = recordOf(item); return r ? `<p class="history">${r.streak >= 2 ? `Right ${r.streak} times in a row.` : r.last ? 'Right last time.' : 'Missed last time.'} ${r.ok} of ${r.n} so far.</p>` : ''; })()}
       ${longHint(item) && !q.revealed ? `<p class="q-hint"><b>Hint</b> ${esc(longHint(item))}</p>` : ''}
       ${answerUI}
@@ -1057,12 +1087,36 @@
       reveal();
       return;
     }
+    const had = q.partial ? q.partial.done.filter(Boolean).length : 0;
+    const m = matchWords(answers, guessNoSie, q.partial);
     q.checked = true;
+    if (m && m.done.every(Boolean)) {   // the last missing words, after earlier checks got the others
+      q.partial = m;
+      q.feedback = { kind: 'good', text: 'Correct this time.' };
+      reveal();
+      return;
+    }
+    if (m && m.n > had) {
+      const fresh = answerWords(item, m.ai).filter((_, i) => m.done[i] && !(q.partial && q.partial.ai === m.ai && q.partial.done[i]));
+      const left = m.done.filter(d => !d).length;
+      q.partial = { ai: m.ai, done: m.done };
+      q.feedback = { kind: 'part', text: `${capitalize(fresh.join(' and '))} ${fresh.length > 1 ? 'are' : 'is'} right. Now the other word${left > 1 ? 's' : ''}.` };
+      saveQuiz();
+      renderQuiz();
+      return;
+    }
     q.feedback = answers.map(stripMarks).includes(stripMarks(guessNoSie))
       ? { kind: 'bad', text: `Nearly. The letters are right, but check the ${APP.languageName} marks such as ${APP.marks}.` }
       : { kind: 'bad', text: 'Not quite. Try again, or reveal the answer.' };
     saveQuiz();
     renderQuiz();
+    shakeAnswer();
+  }
+
+  // a small shake of the answer box for a wrong answer (none with reduced motion: styles.css turns animations off)
+  function shakeAnswer() {
+    const input = $('#answer');
+    if (input) input.classList.add('shake');
   }
 
   function reveal() {
@@ -1088,7 +1142,7 @@
 
   function next() {
     const q = state.quiz;
-    Object.assign(q, { idx: q.idx + 1, revealed: false, checked: false, firstTryRight: false, feedback: null, typed: '' });
+    Object.assign(q, { idx: q.idx + 1, revealed: false, checked: false, firstTryRight: false, feedback: null, typed: '', partial: null });
     saveQuiz();
     renderQuiz();
     scrollToQuiz();

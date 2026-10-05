@@ -387,6 +387,12 @@ tbody tr:last-child > * { border-bottom: 0; }
 }
 .slot small { font: 700 max(.4em, .8125rem) var(--sans); font-style: normal; vertical-align: middle; margin-left: .5em; padding: .15em .5em; background: var(--ink); color: #fff; border-radius: 2px; }
 .slot.filled { font-style: normal; font-weight: 700; color: #fff; background: var(--c); box-shadow: none; }
+/* a gap of several words with some already right: those show in the answer's form, the rest stay as given.
+   Each word gets its own box, so the gap itself has no background showing around or between them */
+.slot.part { background: none; box-shadow: none; padding: 0; }
+.slot .part-right, .slot .part-left { padding: 0 .3em; border-radius: 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.slot .part-right { font-style: normal; font-weight: 700; color: #fff; background: var(--c); }
+.slot .part-left { background: var(--straw); box-shadow: inset 0 -3px 0 var(--ink); }
 .q-hint { margin-top: .75rem; font-size: 1.0625rem; }
 .q-hint b { background: var(--ink); color: #fff; padding: .1rem .5rem; border-radius: 2px; font-size: .875rem; margin-right: .375rem; }
 .w, .slot, .say { cursor: pointer; }
@@ -402,6 +408,8 @@ tbody tr:last-child > * { border-bottom: 0; }
   padding: .5rem .75rem; border: 2px solid var(--ink); border-radius: 2px; background: var(--paper);
 }
 .answer-row input[readonly] { background: var(--linen); border-color: var(--rule); }
+.answer-row input.shake { animation: shake .4s ease-in-out; }
+@keyframes shake { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
 .letters { margin-top: .625rem; display: flex; flex-wrap: wrap; gap: .25rem; }
 .letters button {
   width: 2.375rem; height: 2.375rem; border: 1px solid var(--rule); background: var(--paper);
@@ -411,6 +419,7 @@ tbody tr:last-child > * { border-bottom: 0; }
 .feedback { margin-top: 1rem; font-weight: 700; min-height: 1.6em; }
 .feedback.good { color: var(--ins); }
 .feedback.bad { color: var(--gen); }
+.feedback.part { color: var(--ins); }
 
 .reveal {
   margin-top: 1.25rem; padding: 1.25rem 1.5rem; max-width: 52rem;
