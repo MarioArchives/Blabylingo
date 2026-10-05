@@ -105,12 +105,14 @@ async function pushBoard() {
   const sent = readBoard();
   const daysOf = field => Object.fromEntries(Object.entries(sent).filter(([, d]) => d[field] > 0).map(([day, d]) => [day, { [language]: increment(d[field]) }]));
   const uidNow = uid;
+  // Only days with new counts are sent: with merge, an empty map would replace the stored one and wipe every day so far
+  const days = Object.fromEntries([['rightDays', daysOf('right')], ['masteredDays', daysOf('mastered')]]
+    .filter(([, byDay]) => Object.keys(byDay).length));
   await setDoc(doc(db, 'leaderboard', uidNow), {
     name: profile?.nicknameChosen ? profile.username || '' : '',
     right: { [language]: records.reduce((sum, r) => sum + r.ok, 0) },
     mastered: { [language]: records.filter(r => r.streak >= 2).length },
-    rightDays: daysOf('right'),
-    masteredDays: daysOf('mastered'),
+    ...days,
     updatedAt: serverTimestamp(),
   }, { merge: true });
   // take off only what was sent: answers given while the save was in flight stay pending
