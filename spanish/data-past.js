@@ -3,6 +3,30 @@
    In tables, [square brackets] mark the part of the form to highlight.
    In sentences, word{gloss} gives the hover translation and ___ is the gap. */
 
+/* Irregular participles, shared by every tense built on haber: the perfecto and pluscuamperfecto below
+   and the futuro perfecto in data-future.js. The last four are regular apart from the accent on the í. */
+const IRREGULAR_PARTICIPLES = { title: 'Irregular participles',
+  cols: [{ label: 'Participle', tint: 'all' }, { label: 'English', tint: 'all' }],
+  rows: [
+    { who: 'hacer', cells: ['[hecho]', 'done, made'] },
+    { who: 'decir', cells: ['[dicho]', 'said'] },
+    { who: 'ver', cells: ['[visto]', 'seen'] },
+    { who: 'escribir', cells: ['[escrito]', 'written'] },
+    { who: 'poner', cells: ['[puesto]', 'put'] },
+    { who: 'abrir', cells: ['[abierto]', 'opened'] },
+    { who: 'volver', cells: ['[vuelto]', 'returned'] },
+    { who: 'devolver', cells: ['[devuelto]', 'given back'] },
+    { who: 'resolver', cells: ['[resuelto]', 'solved'] },
+    { who: 'romper', cells: ['[roto]', 'broken'] },
+    { who: 'morir', cells: ['[muerto]', 'died'] },
+    { who: 'cubrir', cells: ['[cubierto]', 'covered'] },
+    { who: 'descubrir', cells: ['[descubierto]', 'discovered'] },
+    { who: 'leer', cells: ['le[í]do', 'read (accent on the í)'] },
+    { who: 'traer', cells: ['tra[í]do', 'brought (accent on the í)'] },
+    { who: 'oír', cells: ['o[í]do', 'heard (accent on the í)'] },
+    { who: 'caer', cells: ['ca[í]do', 'fallen (accent on the í)'] },
+  ] };
+
 const PAST_TENSE = {
   id: 'past', pl: 'Pasado', en: 'Past tenses',
   intro: 'Spanish has several past tenses. The indefinido tells what happened, the imperfecto paints the background and habits, and the perfecto covers experience and things still open. The ending tells you the person, so the pronoun is usually left out. In Latin America “you” in the plural is ustedes, which takes the ellos form.',
@@ -193,21 +217,7 @@ const PAST_TENSE = {
             { who: 'nosotros', cells: ['[hemos]', 'habl[ado]', 'com[ido], viv[ido]'] },
             { who: 'ellos / ellas / ustedes', cells: ['[han]', 'habl[ado]', 'com[ido], viv[ido]'] },
           ] },
-        { title: 'Irregular participles',
-          cols: [{ label: 'Participle', tint: 'all' }, { label: 'English', tint: 'all' }],
-          rows: [
-            { who: 'hacer', cells: ['[hecho]', 'done, made'] },
-            { who: 'decir', cells: ['[dicho]', 'said'] },
-            { who: 'ver', cells: ['[visto]', 'seen'] },
-            { who: 'escribir', cells: ['[escrito]', 'written'] },
-            { who: 'poner', cells: ['[puesto]', 'put'] },
-            { who: 'abrir', cells: ['[abierto]', 'opened'] },
-            { who: 'volver', cells: ['[vuelto]', 'returned'] },
-            { who: 'romper', cells: ['[roto]', 'broken'] },
-            { who: 'morir', cells: ['[muerto]', 'died'] },
-            { who: 'descubrir', cells: ['[descubierto]', 'discovered'] },
-            { who: 'leer', cells: ['le[í]do', 'read (accent on the í)'] },
-          ] },
+        IRREGULAR_PARTICIPLES,
         { title: 'Signal words that call for the perfecto',
           cols: [{ label: 'Example', tint: 'all' }, { label: 'English', tint: 'all' }],
           rows: [
@@ -274,7 +284,8 @@ const PAST_TENSE = {
       ],
     },
     {
-      id: 'past-pluscuam', pl: 'Pluscuamperfecto', short: 'Plusc.', ini: 'Pl', en: 'Past perfect', q: 'había hablado',
+      id: 'past-pluscuam', pl: 'Pluscuam\u00ADperfecto',   // a soft hyphen, so the long name can break in a narrow stripe
+      short: 'Plusc.', ini: 'Pl', en: 'Past perfect', q: 'había hablado',
       summary: 'The pluscuamperfecto is the imperfecto of haber (había, habías, había, habíamos, habían) plus the participle. It puts one past action before another past action: cuando llegué, ya se habían ido.',
       tables: [
         { title: 'haber in the imperfecto + participle',
@@ -286,6 +297,7 @@ const PAST_TENSE = {
             { who: 'nosotros', cells: ['[habíamos]', 'hablado, comido, vivido'] },
             { who: 'ellos / ellas / ustedes', cells: ['[habían]', 'hablado, comido, vivido'] },
           ] },
+        IRREGULAR_PARTICIPLES,
         { title: 'Ordering two past events',
           cols: [{ label: 'Earlier action', tint: 'all' }, { label: 'Later action', tint: 'all' }],
           rows: [

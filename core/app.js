@@ -887,11 +887,19 @@
     return GENDERS[noun] + (item.hint === 'plural' || PLURAL_ONLY.includes(noun) ? '.pl' : '');
   }
 
-  // the gap's words: the ones already right in the answer's form, the rest still as given (or … if the counts differ)
+  // the gap's words: the ones already right in the answer's form, the rest still as given. When the given form has a
+  // different number of words (poner -> ha puesto), the answer's last word is the one that replaces it: until that
+  // word is right the given form stays in its place, and once it is, any helper still missing (ha) shows as …
   function partialGap(item, partial) {
     const right = answerWords(item, partial.ai), given = item.base.trim().split(/\s+/);
-    return right.map((w, i) => partial.done[i] ? `<b class="part-right">${esc(w)}</b>`
-      : `<span class="part-left">${esc(given.length === right.length ? given[i] : '…')}</span>`).join(' ');
+    const sameCount = given.length === right.length;
+    const main = right.length - 1;
+    return right.map((w, i) => {
+      if (partial.done[i]) return `<b class="part-right">${esc(w)}</b>`;
+      if (sameCount) return `<span class="part-left">${esc(given[i])}</span>`;
+      if (i === main) return `<span class="part-left">${esc(item.base)}</span>`;
+      return partial.done[main] ? '<span class="part-left" aria-label="missing word">…</span>' : null;
+    }).filter(Boolean).join(' ');
   }
 
   function sentenceHTML(item, revealed, partial) {
@@ -964,13 +972,15 @@
     const last = q.idx + 1 >= q.queue.length;
     const marked = q.results.length > q.idx;   // this sentence already has a result
 
+    const feedbackLine = (extra = '') => `<p class="feedback ${q.feedback ? q.feedback.kind : ''} ${extra}" role="status">${q.feedback ? esc(q.feedback.text) : ''}</p>`;
     let answerUI = '';
     if (!q.revealed && isNotebook()) {
       answerUI = `<p class="hover-hint">Hover over a word to see its translation. Click it to hear it.</p>
         <p class="notebook-note">Write <i lang="${APP.lang}">${esc(item.base)}</i> in the right form in your notebook. Reveal the answer when you are ready.</p>
         <div class="answer-row"><button type="button" class="btn primary" data-action="reveal" id="reveal-btn">Reveal answer</button></div>`;
     } else if (!q.revealed) {
-      answerUI = `<p class="hover-hint">Hover over a word to see its translation. Click it to hear it.</p>
+      // once an answer has been checked, its feedback takes the hint's place
+      answerUI = `${q.feedback ? feedbackLine('feedback-top') : '<p class="hover-hint">Hover over a word to see its translation. Click it to hear it.</p>'}
         <form class="answer-row" id="answer-form" autocomplete="off">
           <input id="answer" type="text" lang="${APP.lang}" spellcheck="false" autocapitalize="off" autocomplete="off"
             aria-label="Your answer: ${esc(item.base)} in the right form" placeholder="${esc(item.base)} → ?" value="${esc(q.typed)}">
@@ -1028,7 +1038,7 @@
       ${longHint(item) && !q.revealed ? `<p class="q-hint"><b>Hint</b> ${esc(longHint(item))}</p>` : ''}
       ${answerUI}
       <p class="speech-note" id="speech-note" hidden></p>
-      <p class="feedback ${q.feedback ? q.feedback.kind : ''}" role="status">${q.feedback ? esc(q.feedback.text) : ''}</p>
+      ${!q.revealed && !isNotebook() && q.feedback ? '' : feedbackLine()}
       ${afterReveal}
     </div>${state.crib ? cribPanel(item) : ''}`;
 

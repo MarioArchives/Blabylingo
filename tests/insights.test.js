@@ -374,7 +374,9 @@ test('data: every radar group has a short name of up to 7 characters and an init
     const ctx = {};
     vm.createContext(ctx);
     const dir = path.join(__dirname, '..', lang);
-    for (const f of fs.readdirSync(dir).filter(f => /^data.*\.js$/.test(f))) {
+    // in the order the page loads them, since a later file can use what an earlier one defines
+    const order = [...fs.readFileSync(path.join(dir, 'index.html'), 'utf8').matchAll(/<script src="(data[^"]*\.js)"/g)].map(m => m[1]);
+    for (const f of order) {
       vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8').replace(/^const /gm, 'var '), ctx);
     }
     const groupLists = Object.entries(ctx).map(([k, v]) => k === 'CASES' ? v : v && v.groups).filter(Array.isArray);

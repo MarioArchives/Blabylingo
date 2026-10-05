@@ -12,7 +12,7 @@ Click any word in a quiz sentence to hear it. Google Chrome has a Spanish voice;
 
 ## Files
 
-- `data-present.js`, `data-past.js` and `data-future.js` hold the tense tables and quiz sentences. Check them with `node ../core/validate.js data-past.js PAST_TENSE`.
+- `data-present.js`, `data-past.js` and `data-future.js` hold the tense tables and quiz sentences. Check them with `node ../core/validate.js data-past.js PAST_TENSE`. `data-future.js` reuses the irregular participles table from `data-past.js`, so check it with `node ../core/validate.js data-future.js FUTURE_TENSE data-past.js`.
 - `data-idioms.js` holds Colombian idiom sentences. Idioms join the Present, Past or Future quiz, each filed under the verb group whose tables show its answer. The answer card names the idiom, what it means and what it says literally, and "Idioms only" on the quiz start screen picks just these. Check it with `node validate-idioms.js`.
 - `config.js` holds the language settings.
 - `index.html` holds the title, the favicon and the list of data files to load.

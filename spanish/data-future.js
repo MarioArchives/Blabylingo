@@ -165,6 +165,7 @@ const FUTURE_TENSE = {
             { who: 'nosotros', cells: ['[habremos]', 'terminado, comido, salido'] },
             { who: 'ellos / ellas / ustedes', cells: ['[habrán]', 'terminado, comido, salido'] },
           ] },
+        IRREGULAR_PARTICIPLES,   // from data-past.js, which loads first
       ],
       rules: [
         { t: 'A guess or estimate about now: the futuro simple', ex: 'Serán las diez.', en: 'It must be about ten.' },

@@ -137,7 +137,7 @@ a.btn { display: inline-block; text-decoration: none; }
   /* a thin woven thread runs beside each broad band */
   background: linear-gradient(90deg, var(--c) 0 5px, var(--straw) 5px 8px, var(--c) 8px);
 }
-.stripe .s-pl { font: 700 1.1875rem/1.1 var(--serif); }
+.stripe .s-pl { font: 700 1.1875rem/1.1 var(--serif); overflow-wrap: break-word; }   /* a long name wraps rather than spilling out */
 .stripe .s-q { font-style: italic; font-size: .9375rem; opacity: .92; }
 .stripe .s-en { font-size: .8125rem; opacity: .85; }
 .stripe[aria-pressed="false"] {
@@ -420,6 +420,7 @@ tbody tr:last-child > * { border-bottom: 0; }
 .feedback.good { color: var(--ins); }
 .feedback.bad { color: var(--gen); }
 .feedback.part { color: var(--ins); }
+.feedback.feedback-top { margin-top: .625rem; min-height: 0; }   /* in the hover hint's place, above the answer box */
 
 .reveal {
   margin-top: 1.25rem; padding: 1.25rem 1.5rem; max-width: 52rem;

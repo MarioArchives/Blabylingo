@@ -1,9 +1,12 @@
 #!/usr/bin/env node
-/* Checks a tense data file (any language). Run it from a language folder: node ../core/validate.js data-past.js PAST_TENSE */
+/* Checks a tense data file (any language). Run it from a language folder: node ../core/validate.js data-past.js PAST_TENSE
+   A file that uses something another file defines names that file after, and it is loaded first:
+   node ../core/validate.js data-future.js FUTURE_TENSE data-past.js */
 const fs = require('fs');
-const [file, name] = process.argv.slice(2);
-if (!file || !name) { console.error('usage: node validate.js <file> <CONST_NAME>'); process.exit(2); }
-const topic = new Function(`${fs.readFileSync(file, 'utf8')}; return ${name};`)();
+const [file, name, ...before] = process.argv.slice(2);
+if (!file || !name) { console.error('usage: node validate.js <file> <CONST_NAME> [files it needs ...]'); process.exit(2); }
+const source = [...before, file].map(f => fs.readFileSync(f, 'utf8')).join('\n;\n');
+const topic = new Function(`${source}; return ${name};`)();
 const errs = [];
 const need = (ok, msg) => { if (!ok) errs.push(msg); };
 const str = v => typeof v === 'string' && v.trim().length > 0;
@@ -16,7 +19,7 @@ const ids = new Set();
   ['id', 'pl', 'en', 'q', 'summary'].forEach(k => need(str(g[k]), `${at}.${k} missing`));
   need(!ids.has(g.id), `${at}.id duplicated`); ids.add(g.id);
   need(g.colour === undefined || ['nom', 'gen', 'dat', 'acc', 'ins', 'loc', 'voc'].includes(g.colour), `${at}.colour must be a case colour`);
-  need(str(g.pl) && g.pl.length <= 16, `${at}.pl must be 16 characters or fewer (it sits on a narrow stripe)`);
+  need(str(g.pl) && g.pl.replace(/\u00AD/g, '').length <= 16, `${at}.pl must be 16 characters or fewer (it sits on a narrow stripe); soft hyphens do not count`);
   need(g.cases === undefined || (Array.isArray(g.cases) && g.cases.every(c => /^(nom|gen|dat|acc|ins|loc|voc)\.(sg|pl)$/.test(c))), `${at}.cases must be like ['gen.pl']`);
   need(Array.isArray(g.tables) && g.tables.length >= 1, `${at}.tables needs at least one table`);
   (g.tables || []).forEach((t, j) => {
