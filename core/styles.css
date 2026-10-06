@@ -205,7 +205,10 @@ tbody tr:last-child > * { border-bottom: 0; }
 .gtable .g-title { padding-top: 2rem; }
 /* "same as the nominative plural": the table repeats the nominative's forms */
 .g-same { display: block; margin-top: .25rem; font: italic 400 1rem/1.3 var(--serif); text-transform: none; letter-spacing: 0; color: var(--ink-soft); }
-.gtable th, .gtable td { border: 0; text-align: center; vertical-align: middle; padding: .75rem .5rem; }
+/* forms start on the left edge, so the endings of a column line up under each other */
+.gtable th, .gtable td { border: 0; text-align: start; vertical-align: middle; padding: .75rem .75rem; }
+/* tables with no marked ending to line up (the case grids, plain lists) stay centred */
+@media (min-width: 641px) { .gtable:not(:has(.g-form b)) :is(th, td) { text-align: center; } }
 .gtable .col-label { width: 8.5rem; }
 .gtable .g-label { background: var(--label); font: 400 1rem var(--sans); text-transform: uppercase; letter-spacing: .03em; color: var(--ink); white-space: normal; }
 .gtable .g-head { font: 900 1.375rem var(--sans); color: #000; white-space: nowrap; }
@@ -237,7 +240,12 @@ tbody tr:last-child > * { border-bottom: 0; }
 .g-ex { font-style: italic; font-size: 1.125rem; margin-top: .125rem; }
 .g-eq { font-size: 1.125rem; margin-top: .125rem; }
 .g-form { font: 400 1.3125rem var(--serif); }
-.g-form b { font-weight: 700; color: var(--ending); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+/* the part that changes: a chip in a deep shade of its column's colour, white text (red where a form sits outside a coloured cell) */
+.t-k1 { --chip: #9A6516; } .t-k2 { --chip: #24766A; } .t-k3 { --chip: #94405A; } .t-k4 { --chip: #3F5F9E; }
+.t-m, .t-m1 { --chip: #2B66AD; } .t-m2 { --chip: #3A73B5; } .t-f { --chip: #B83A29; } .t-n { --chip: #2F7A40; } .t-all { --chip: #4F5566; }
+.t-p1sg { --chip: #B24E2A; } .t-p2sg { --chip: #A23E74; } .t-p3sg { --chip: #6650AA; }
+.t-p1pl { --chip: #2B66AD; } .t-p2pl { --chip: #24766A; } .t-p3pl { --chip: #3B7A2B; }
+.g-form b { font-weight: 700; color: #fff; background: var(--chip, var(--ending)); border-radius: 3px; padding: 0 .14em; margin: 0 .02em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .gtable.tense { min-width: 32rem; }
 .gtable.tense caption { font-size: 1.25rem; text-transform: none; }
 .gtable.tense .g-label { text-transform: none; font-size: 1.0625rem; }
@@ -248,6 +256,23 @@ tbody tr:last-child > * { border-bottom: 0; }
 .gtable.words .g-label { text-transform: none; font: 700 1.1875rem var(--serif); }
 .gtable.words thead .g-label { font: 400 1rem var(--sans); text-transform: uppercase; }
 .gtable.words .g-cell { padding: .5rem; }
+
+/* Verb lists: one drop-down per verb that opens on every person's form */
+.verb-list { background: var(--paper); padding: .25rem; color: #000; }
+.verb-list-title { font: 900 1.25rem/1.2 var(--sans); color: var(--ink); padding: 1rem .5rem .75rem; text-align: center; }
+.verb + .verb { margin-top: 4px; }
+.verb > summary { display: flex; align-items: center; gap: .75rem; padding: .625rem .75rem; background: var(--label); cursor: pointer; list-style: none; }
+.verb > summary::-webkit-details-marker { display: none; }
+.verb > summary::before { content: ''; flex: none; width: .5rem; height: .5rem; border: solid var(--ink); border-width: 0 2px 2px 0; transform: rotate(-45deg); transition: transform .15s; margin-right: .125rem; }
+.verb[open] > summary::before { transform: rotate(45deg); }
+.verb > summary:hover { filter: brightness(.97); }
+.verb > summary:focus-visible { outline: 3px solid var(--ink); outline-offset: -3px; }
+.verb-name { font: 700 1.0625rem var(--sans); color: var(--ink); }
+/* the forms sit straight under the verb's bar, with no gap or frame of their own */
+.verb > .table-wrap.grid-wrap { margin: 0; padding: 0; border: 0; overflow: visible; }
+.verb > .table-wrap.grid-wrap + .table-wrap.grid-wrap { margin-top: 2px; }
+.verb .gtable.tense, .grid-wrap.mini .verb .gtable.tense { min-width: 0; width: 100%; margin: -2px 0; }
+.verb-list.mini .verb-list-title { font-size: 1.0625rem; padding: .5rem; }
 .gtable.words .g-head { font-size: 1.125rem; }
 .gtable.words .g-sub { font-size: 1rem; }
 .gtable.narrow { min-width: 28rem; max-width: 44rem; }
@@ -400,6 +425,13 @@ tbody tr:last-child > * { border-bottom: 0; }
 .say:hover, .say:focus-visible { background: #E4E8E0; outline: none; }
 .speech-note { margin-top: .75rem; max-width: 40rem; padding: .5rem .75rem; background: #FFF3C4; border-left: 4px solid var(--straw); font-size: .9375rem; }
 .hover-hint { margin-top: .625rem; font-size: .9375rem; color: var(--ink-soft); }
+.hint-touch { display: none; }
+/* back to the quiz from a table further down the page */
+.to-quiz { position: fixed; right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); z-index: 20; width: 3rem; height: 3rem; border: 0; border-radius: 50%;
+  background: var(--ink); color: #fff; font: 700 1.375rem/1 var(--sans); cursor: pointer; box-shadow: 0 2px 8px rgba(28, 32, 48, .3); }
+.to-quiz:hover { background: #000; }
+.to-quiz:focus-visible { outline: 3px solid var(--straw); outline-offset: 2px; }
+@media (hover: none) { .hint-hover { display: none; } .hint-touch { display: inline; } }
 
 .answer-row { margin-top: 2rem; display: flex; flex-wrap: wrap; gap: .625rem; align-items: stretch; }
 .answer-row input {
@@ -625,6 +657,9 @@ body:has(#view-quiz.with-crib:not([hidden])) > nav, main:has(#view-quiz.with-cri
   .q-top { flex-direction: column; gap: .25rem; }
   .views { gap: 1.25rem; }
   .letters button { width: 2.125rem; height: 2.125rem; }
+  .verb-name { font-size: 1rem; }
+  .verb .by-col, .verb .ptable { margin: 0; }
+  .verb-list-title { text-align: left; font-size: 1rem; padding: .5rem .25rem; }
 }
 
 /* Phones, languages with phoneTables: 'by-column' (config.js): a verb table whose rows are persons becomes one small table

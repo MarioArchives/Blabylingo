@@ -564,15 +564,17 @@
   }
   // Phones: with APP.phoneTables === 'by-column', a table whose rows are all persons is also drawn as one small table per column
   // (-ar, then -er, then -ir), each listing every person with its form. CSS shows these instead of the full table at phone width.
-  const byColumn = t => APP.phoneTables === 'by-column' && t.cols.length > 1 && t.rows.length > 1 && t.rows.every(r => personKey(r.who));
+  // A verb's drop-down with a single column of forms is drawn the same way, as one person | form list.
+  const byColumn = t => ((APP.phoneTables === 'by-column' && t.cols.length > 1) || (t.part && t.cols.length === 1))
+    && t.rows.length > 1 && t.rows.every(r => personKey(r.who));
   function columnBlocks(t, hl, tints) {
-    const verbs = (t.title.split(':')[1] !== undefined ? t.title.split(':')[0] : '').split(/\s*,\s*/);   // "hablar, comer, vivir: ..."
+    const title = t.title || '', verbs = (title.split(':')[1] !== undefined ? title.split(':')[0] : '').split(/\s*,\s*/);   // "hablar, comer, vivir: ..."
     const heading = (c, i) => {
       const label = c.label.toLowerCase(), m = label.match(/^-(ar|er|ir)$/), v = verbs.length === t.cols.length && verbs[i];
       return m && v && v.toLowerCase().endsWith(m[1]) ? `${label} · ${v}` : label;
     };
     return `<div class="by-col">
-      <p class="by-col-title">${esc(t.title)}</p>
+      ${title ? `<p class="by-col-title">${esc(title)}</p>` : ''}
       ${t.cols.map((c, i) => `<table class="ptable">
         <caption class="g-head t-${tints[i]}">${esc(heading(c, i))}</caption>
         <tbody>${t.rows.map((r, ri) => `<tr><th scope="row" class="g-label r-${personKey(r.who)}" lang="${APP.lang}">${esc(r.who)}</th>
@@ -580,9 +582,27 @@
       </table>`).join('')}
     </div>`;
   }
-  const tenseTable = (t, hl, mini) => { const tints = colTints(t), split = byColumn(t); return `<div class="table-wrap grid-wrap ${mini ? 'mini' : ''}${split ? ' has-by-col' : ''}">
+  // A table with one verb per row and every person's form in t.forms (parts of { cols, who }, each row's forms one entry per
+  // who, in order): each verb is a drop-down that opens on all its forms. The verb a quiz item lands on opens by itself.
+  const hasForms = t => Array.isArray(t.forms) && t.rows.every(r => Array.isArray(r.forms));
+  function verbList(t, hl, mini) {
+    return `<div class="verb-list${mini ? ' mini' : ''}">
+      <p class="verb-list-title">${esc(t.title)}</p>
+      ${t.rows.map((r, ri) => {
+        let k = 0;
+        const parts = t.forms.map(part => tenseTable({ part: true, cols: part.cols, rows: part.who.map(who => ({ who, cells: [].concat(r.forms[k++]) })) }, null, true));
+        return `<details class="verb"${hl && !hl.weak && hl.rows.has(ri) ? ' open' : ''}>
+        <summary><span class="verb-name" lang="${APP.lang}">${esc(r.who)}</span></summary>
+        ${parts.join('')}
+      </details>`;
+      }).join('')}
+    </div>`;
+  }
+  const tenseTable = (t, hl, mini) => { const tints = colTints(t), split = byColumn(t);
+    if (hasForms(t)) return `${verbList(t, hl, mini)}${!mini && t.note ? `<ul class="g-notes"><li>${esc(t.note)}</li></ul>` : ''}`;
+    return `<div class="table-wrap grid-wrap ${mini ? 'mini' : ''}${split ? ' has-by-col' : ''}">
       <table class="gtable tense">
-        <caption>${esc(t.title)}</caption>
+        ${t.title ? `<caption>${esc(t.title)}</caption>` : ''}
         <thead><tr><th class="g-label"></th>${t.cols.map((c, i) => `<th scope="col" class="g-head t-${tints[i]}">${esc(c.label.toLowerCase())}</th>`).join('')}</tr></thead>
         <tbody>${t.rows.map((r, ri) => `<tr><th scope="row" class="g-label${personKey(r.who) ? ` r-${personKey(r.who)}` : ''}" lang="${APP.lang}">${esc(r.who)}</th>
           ${r.cells.map((cell, i) => `<td class="g-cell t-${tints[i]} ${hl && hl.rows.has(ri) && hl.cols.has(i) ? 'hl' : ''}" data-col="${esc(t.cols[i].label)}"><span class="g-form" lang="${APP.lang}">${markEndings(cell)}</span></td>`).join('')}</tr>`).join('')}</tbody>
@@ -877,8 +897,12 @@
   const current = () => state.quiz.queue[state.quiz.idx];
   const isNotebook = () => state.mode === 'notebook';
 
-  const shortHint = item => item.hint && item.hint.length <= 12 ? item.hint : '';
-  const longHint = item => item.hint && item.hint.length > 12 ? item.hint : '';
+  // a noun that only has a plural (rodzice, wakacje) is always plural, so its sentences show the hint without needing one
+  const pluralOnly = item => typeof PLURAL_ONLY !== 'undefined' && state.topic.id === 'cases' && item.kind !== 'pronoun'
+    && item.base.trim().split(/\s+/).some(w => PLURAL_ONLY.includes(w));
+  const hintOf = item => item.hint || (pluralOnly(item) ? 'plural' : '');
+  const shortHint = item => hintOf(item).length <= 12 ? hintOf(item) : '';
+  const longHint = item => hintOf(item).length > 12 ? hintOf(item) : '';
 
   function gapTag(item) {
     if (typeof GENDERS === 'undefined' || state.topic.id !== 'cases' || item.kind === 'pronoun') return '';
@@ -973,14 +997,18 @@
     const marked = q.results.length > q.idx;   // this sentence already has a result
 
     const feedbackLine = (extra = '') => `<p class="feedback ${q.feedback ? q.feedback.kind : ''} ${extra}" role="status">${q.feedback ? esc(q.feedback.text) : ''}</p>`;
+    // touch screens have no hover: the hint says tap there
+    const HOVER_HINT = '<p class="hover-hint"><span class="hint-hover">Hover over a word to see its translation. Click it to hear it.</span><span class="hint-touch">Tap a word to see its translation and hear it.</span></p>';
     let answerUI = '';
+    // once an answer has been checked, its feedback takes the hint's place above the answer box, at every screen width
+    const feedbackOnTop = !!q.feedback && !isNotebook() && (!q.revealed || !!q.typed.trim());
     if (!q.revealed && isNotebook()) {
-      answerUI = `<p class="hover-hint">Hover over a word to see its translation. Click it to hear it.</p>
+      answerUI = `${HOVER_HINT}
         <p class="notebook-note">Write <i lang="${APP.lang}">${esc(item.base)}</i> in the right form in your notebook. Reveal the answer when you are ready.</p>
         <div class="answer-row"><button type="button" class="btn primary" data-action="reveal" id="reveal-btn">Reveal answer</button></div>`;
     } else if (!q.revealed) {
       // once an answer has been checked, its feedback takes the hint's place
-      answerUI = `${q.feedback ? feedbackLine('feedback-top') : '<p class="hover-hint">Hover over a word to see its translation. Click it to hear it.</p>'}
+      answerUI = `${q.feedback ? feedbackLine('feedback-top') : HOVER_HINT}
         <form class="answer-row" id="answer-form" autocomplete="off">
           <input id="answer" type="text" lang="${APP.lang}" spellcheck="false" autocapitalize="off" autocomplete="off"
             aria-label="Your answer: ${esc(item.base)} in the right form" placeholder="${esc(item.base)} → ?" value="${esc(q.typed)}">
@@ -989,7 +1017,8 @@
         </form>
         <div class="letters" aria-label="Special letters">${LETTERS.map(l => `<button type="button" data-letter="${l}" aria-label="Insert ${l}">${l}</button>`).join('')}</div>`;
     } else if (q.typed.trim()) {
-      answerUI = `<div class="answer-row"><input type="text" readonly aria-label="What you typed" value="${esc(q.typed)}"></div>`;
+      answerUI = `${q.feedback ? feedbackLine('feedback-top') : ''}
+        <div class="answer-row"><input type="text" readonly aria-label="What you typed" value="${esc(q.typed)}"></div>`;
     }
 
     const nextLabel = last ? 'See my results' : 'Next sentence';
@@ -1038,7 +1067,7 @@
       ${longHint(item) && !q.revealed ? `<p class="q-hint"><b>Hint</b> ${esc(longHint(item))}</p>` : ''}
       ${answerUI}
       <p class="speech-note" id="speech-note" hidden></p>
-      ${!q.revealed && !isNotebook() && q.feedback ? '' : feedbackLine()}
+      ${feedbackOnTop ? '' : feedbackLine()}
       ${afterReveal}
     </div>${state.crib ? cribPanel(item) : ''}`;
 
@@ -1491,6 +1520,7 @@
       const input = $('#answer');
       const { selectionStart: a, selectionEnd: b, value } = input;
       input.value = value.slice(0, a) + letter.dataset.letter + value.slice(b);
+      if (state.quiz) state.quiz.typed = input.value;
       input.focus();
       input.setSelectionRange(a + 1, a + 1);
       return;
@@ -1539,6 +1569,31 @@
     const k = e.key.toLowerCase();
     if (k === 'y') { e.preventDefault(); selfMark(true); }
     else if (k === 'n') { e.preventDefault(); selfMark(false); }
+  });
+
+  // keep what is typed in the quiz state as it is typed, so redrawing the quiz (a table tab, showing the tables) keeps it
+  document.addEventListener('input', e => { if (e.target.id === 'answer' && state.quiz && !state.quiz.revealed) state.quiz.typed = e.target.value; });
+
+  // a small arrow back up to the quiz, once the sentence has scrolled out of sight while checking a table further down
+  const toQuiz = document.createElement('button');
+  toQuiz.type = 'button';
+  toQuiz.className = 'to-quiz';
+  toQuiz.hidden = true;
+  toQuiz.setAttribute('aria-label', 'Back to the quiz');
+  toQuiz.innerHTML = '<span aria-hidden="true">↑</span>';
+  document.body.append(toQuiz);
+  const placeToQuiz = () => {
+    const quiz = $('#view-quiz'), sentence = quiz && !quiz.hidden && quiz.querySelector('.sentence');
+    toQuiz.hidden = !sentence || sentence.getBoundingClientRect().bottom > 0;
+  };
+  window.addEventListener('scroll', placeToQuiz, { passive: true });
+  window.addEventListener('resize', placeToQuiz);
+  document.addEventListener('click', () => requestAnimationFrame(placeToQuiz));   // a view switch or a redraw moves things too
+  toQuiz.addEventListener('click', () => {
+    const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: $('#view-quiz').getBoundingClientRect().top + window.scrollY - 8, behavior: smooth ? 'smooth' : 'instant' });
+    ($('#answer') || $('#next-btn') || $('#reveal-btn'))?.focus({ preventScroll: true });
+    toQuiz.hidden = true;
   });
 
   document.addEventListener('submit', e => { if (e.target.id === 'answer-form') { e.preventDefault(); if (!state.quiz.revealed) checkAnswer(); } });

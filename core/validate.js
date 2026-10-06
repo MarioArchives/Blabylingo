@@ -27,6 +27,15 @@ const ids = new Set();
     need(Array.isArray(t.cols) && t.cols.every(c => str(c.label) && ['m', 'n', 'f', 'all'].includes(c.tint)), `${at}.tables[${j}].cols must be [{label, tint: m|n|f|all}]`);
     (t.rows || []).forEach((r, k) => need(str(r.who) && Array.isArray(r.cells) && r.cells.length === t.cols.length, `${at}.tables[${j}].rows[${k}] needs who + one cell per column`));
     need(Array.isArray(t.rows) && t.rows.length >= 1, `${at}.tables[${j}].rows empty`);
+    if (t.forms !== undefined) {   // every person's form for each verb row: parts of { cols, who }, then one entry per who in each row
+      const parts = Array.isArray(t.forms) ? t.forms : [];
+      need(parts.length >= 1 && parts.every(p => Array.isArray(p.cols) && p.cols.every(c => str(c.label) && ['m', 'n', 'f', 'all'].includes(c.tint)) && Array.isArray(p.who) && p.who.every(str)),
+        `${at}.tables[${j}].forms must be [{ cols: [{label, tint}], who: ['yo', …] }]`);
+      const shape = parts.flatMap(p => (p.who || []).map(() => (p.cols || []).length));
+      (t.rows || []).forEach((r, k) => need(Array.isArray(r.forms) && r.forms.length === shape.length
+        && r.forms.every((f, i) => shape[i] === 1 ? str(f) || (Array.isArray(f) && f.length === 1 && str(f[0])) : Array.isArray(f) && f.length === shape[i] && f.every(str)),
+        `${at}.tables[${j}].rows[${k}] (${r.who}) needs forms: one per person in forms, each with one form per column`));
+    }
   });
   need(Array.isArray(g.rules) && g.rules.length >= 1 && g.rules.every(r => str(r.t) && str(r.ex) && str(r.en)), `${at}.rules must be [{t, ex, en}]`);
   need(Array.isArray(g.watch) && g.watch.every(str), `${at}.watch must be an array of strings`);
