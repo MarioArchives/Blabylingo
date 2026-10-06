@@ -430,6 +430,8 @@ tbody tr:last-child > * { border-bottom: 0; }
 .to-quiz { position: fixed; right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); z-index: 20; width: 3rem; height: 3rem; border: 0; border-radius: 50%;
   background: var(--ink); color: #fff; font: 700 1.375rem/1 var(--sans); cursor: pointer; box-shadow: 0 2px 8px rgba(28, 32, 48, .3); }
 .to-quiz:hover { background: #000; }
+/* a ^ drawn from two borders, like the verb drop-downs' arrow */
+.to-quiz::before { content: ''; display: block; width: .75rem; height: .75rem; margin: .3rem auto 0; border: solid #fff; border-width: 3px 0 0 3px; transform: rotate(45deg); }
 .to-quiz:focus-visible { outline: 3px solid var(--straw); outline-offset: 2px; }
 @media (hover: none) { .hint-hover { display: none; } .hint-touch { display: inline; } }
 

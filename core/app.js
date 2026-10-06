@@ -378,9 +378,11 @@
     const noun = words.find(w => GENDERS[w]);
     if (!noun) return null;
     const number = item.hint === 'plural' || PLURAL_ONLY.includes(noun) ? 'pl' : 'sg';
+    // a word that is not a noun is the adjective (duży dom); pan Nowak is two nouns, both on the noun row
+    const adjective = words.some(w => !GENDERS[w]);
     const rows = new Set(['Nouns']);
-    if (words.length > 1) rows.add('Adjectives');
-    return { number, col: COL[GENDERS[noun]], rows, label: `${COL_NAMES[number][COL[GENDERS[noun]]]} ${number === 'sg' ? 'singular' : 'plural'}${words.length > 1 ? ', noun and adjective' : ''}` };
+    if (adjective) rows.add('Adjectives');
+    return { number, col: COL[GENDERS[noun]], rows, label: `${COL_NAMES[number][COL[GENDERS[noun]]]} ${number === 'sg' ? 'singular' : 'plural'}${adjective ? ', noun and adjective' : ''}` };
   }
 
   // Six slots per word: masc. animate, masc. inanimate, neuter, feminine, plural with men, other plural
@@ -1580,7 +1582,6 @@
   toQuiz.className = 'to-quiz';
   toQuiz.hidden = true;
   toQuiz.setAttribute('aria-label', 'Back to the quiz');
-  toQuiz.innerHTML = '<span aria-hidden="true">↑</span>';
   document.body.append(toQuiz);
   const placeToQuiz = () => {
     const quiz = $('#view-quiz'), sentence = quiz && !quiz.hidden && quiz.querySelector('.sentence');
