@@ -1,46 +1,93 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Blabilingo – language endings practice</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bona+Nova:ital,wght@0,400;0,700;1,400&family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Cpath fill='%23C1121F' d='M0 0h2v2H0z'/%3E%3Cpath fill='%231D5FBF' d='M2 0h2v2H2z'/%3E%3Cpath fill='%23FFD23F' d='M0 2h2v2H0z'/%3E%3Cpath fill='%231B7A43' d='M2 2h2v2H2z'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="core/styles.css">
-<style>
-  .choose { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; padding-bottom: 3rem; }
-  .choose a { display: grid; gap: .375rem; padding: 1.25rem 1.5rem; border: 2px solid var(--ink); border-radius: 2px; color: var(--ink); text-decoration: none; background: transparent; }
-  .choose a:hover { background: var(--paper); }
-  .choose b { font: 700 2rem/1.1 var(--serif); }
-  .choose i { color: var(--ink-soft); }
-  .choose span { font-size: .9375rem; color: var(--ink-soft); }
-</style>
-</head>
-<body>
-<header class="masthead">
-  <div class="masthead-bar"><nav class="languages" aria-label="Help"><a href="guide.html">Guide</a></nav><div id="account" class="account"></div></div>
-  <h1>Blabilingo</h1>
-  <p class="lede">Practise the endings that make a language hard. Pick one, study the tables, then test yourself on real sentences.</p>
-</header>
-<main>
-  <nav id="choose" class="choose" aria-label="Language"></nav>
-</main>
-<script src="languages.js"></script>
-<script>
-  document.getElementById('choose').innerHTML = LANGUAGES.map(l => `
-    <a href="${l.id}/index.html"><b lang="${l.lang}">${l.name}</b><i lang="${l.lang}">${l.app}</i><span>${l.en}. ${l.about}</span></a>`).join('');
-</script>
-<script type="module">
-  import { onUser, ensureProfile, nameOf } from './core/cloud.js';
-  const box = document.getElementById('account');
-  const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
-  onUser(async user => {
-    if (!user) { box.innerHTML = '<a href="signin.html">Sign in</a>'; return; }
-    const profile = await ensureProfile(user).catch(() => ({}));
-    box.innerHTML = `<a href="account.html">${esc(nameOf(profile, user))}</a>`;
-  });
-</script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Blabylingo – language endings practice</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bona+Nova:ital,wght@0,400;0,700;1,400&family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Cpath fill='%23C1121F' d='M0 0h2v2H0z'/%3E%3Cpath fill='%231D5FBF' d='M2 0h2v2H2z'/%3E%3Cpath fill='%23FFD23F' d='M0 2h2v2H0z'/%3E%3Cpath fill='%231B7A43' d='M2 2h2v2H2z'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="core/styles.css" />
+    <style>
+      .choose {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+        gap: 1rem;
+        padding-bottom: 3rem;
+      }
+      .choose a {
+        display: grid;
+        gap: 0.375rem;
+        padding: 1.25rem 1.5rem;
+        border: 2px solid var(--ink);
+        border-radius: 2px;
+        color: var(--ink);
+        text-decoration: none;
+        background: transparent;
+      }
+      .choose a:hover {
+        background: var(--paper);
+      }
+      .choose b {
+        font: 700 2rem/1.1 var(--serif);
+      }
+      .choose i {
+        color: var(--ink-soft);
+      }
+      .choose span {
+        font-size: 0.9375rem;
+        color: var(--ink-soft);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="masthead-bar">
+        <nav class="languages" aria-label="Help">
+          <a href="guide.html">Guide</a>
+        </nav>
+        <div id="account" class="account"></div>
+      </div>
+      <h1>Blabylingo</h1>
+      <p class="lede">
+        Practise the endings that make a language hard. Pick one, study the
+        tables, then test yourself on real sentences.
+      </p>
+    </header>
+    <main>
+      <nav id="choose" class="choose" aria-label="Language"></nav>
+    </main>
+    <script src="languages.js"></script>
+    <script>
+      document.getElementById("choose").innerHTML = LANGUAGES.map(
+        (l) => `
+    <a href="${l.id}/index.html"><b lang="${l.lang}">${l.name}</b><i lang="${l.lang}">${l.app}</i><span>${l.en}. ${l.about}</span></a>`,
+      ).join("");
+    </script>
+    <script type="module">
+      import { onUser, ensureProfile, nameOf } from "./core/cloud.js";
+      const box = document.getElementById("account");
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"]/g,
+          (ch) =>
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch],
+        );
+      onUser(async (user) => {
+        if (!user) {
+          box.innerHTML = '<a href="signin.html">Sign in</a>';
+          return;
+        }
+        const profile = await ensureProfile(user).catch(() => ({}));
+        box.innerHTML = `<a href="account.html">${esc(nameOf(profile, user))}</a>`;
+      });
+    </script>
+  </body>
 </html>

@@ -1,297 +1,759 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>How it works – Blabilingo</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bona+Nova:ital,wght@0,400;0,700;1,400&family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Cpath fill='%23C1121F' d='M0 0h2v2H0z'/%3E%3Cpath fill='%231D5FBF' d='M2 0h2v2H2z'/%3E%3Cpath fill='%23FFD23F' d='M0 2h2v2H0z'/%3E%3Cpath fill='%231B7A43' d='M2 2h2v2H2z'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="core/styles.css">
-<style>
-  .guide { display: grid; gap: 1.25rem; max-width: 44rem; }
-  .guide-card {
-    background: var(--paper); border-radius: var(--radius-card); box-shadow: var(--shadow-soft);
-    padding: clamp(1.25rem, 4vw, 2rem); scroll-margin-top: 1rem; min-width: 0;
-  }
-  .guide-card h2 { font: 700 clamp(1.625rem, 5vw, 2rem)/1.15 var(--serif); }
-  .guide-card h3 { margin-top: 1.5rem; font: 700 1.1875rem/1.3 var(--sans); }
-  .guide-card p, .guide-card ul, .guide-card ol { max-width: 65ch; }
-  .guide-card p { margin-top: .75rem; }
-  .guide-card ul, .guide-card ol { margin: .75rem 0 0; padding-left: 1.25rem; display: grid; gap: .375rem; }
-  .guide-card a { color: var(--ink); text-decoration-color: var(--rule); text-decoration-thickness: 2px; text-underline-offset: 3px; }
-  .guide-card a:hover { text-decoration-color: var(--ink); }
-  .guide-card code { font-size: .9375em; background: var(--linen); padding: .0625rem .375rem; border-radius: .375rem; white-space: nowrap; }
-  .note { padding: .75rem 1rem; background: var(--linen); border-radius: var(--radius-sm); color: var(--ink-soft); }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>How it works – Blabylingo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bona+Nova:ital,wght@0,400;0,700;1,400&family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Cpath fill='%23C1121F' d='M0 0h2v2H0z'/%3E%3Cpath fill='%231D5FBF' d='M2 0h2v2H2z'/%3E%3Cpath fill='%23FFD23F' d='M0 2h2v2H0z'/%3E%3Cpath fill='%231B7A43' d='M2 2h2v2H2z'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="core/styles.css" />
+    <style>
+      .guide {
+        display: grid;
+        gap: 1.25rem;
+        max-width: 44rem;
+      }
+      .guide-card {
+        background: var(--paper);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-soft);
+        padding: clamp(1.25rem, 4vw, 2rem);
+        scroll-margin-top: 1rem;
+        min-width: 0;
+      }
+      .guide-card h2 {
+        font: 700 clamp(1.625rem, 5vw, 2rem)/1.15 var(--serif);
+      }
+      .guide-card h3 {
+        margin-top: 1.5rem;
+        font: 700 1.1875rem/1.3 var(--sans);
+      }
+      .guide-card p,
+      .guide-card ul,
+      .guide-card ol {
+        max-width: 65ch;
+      }
+      .guide-card p {
+        margin-top: 0.75rem;
+      }
+      .guide-card ul,
+      .guide-card ol {
+        margin: 0.75rem 0 0;
+        padding-left: 1.25rem;
+        display: grid;
+        gap: 0.375rem;
+      }
+      .guide-card a {
+        color: var(--ink);
+        text-decoration-color: var(--rule);
+        text-decoration-thickness: 2px;
+        text-underline-offset: 3px;
+      }
+      .guide-card a:hover {
+        text-decoration-color: var(--ink);
+      }
+      .guide-card code {
+        font-size: 0.9375em;
+        background: var(--linen);
+        padding: 0.0625rem 0.375rem;
+        border-radius: 0.375rem;
+        white-space: nowrap;
+      }
+      .note {
+        padding: 0.75rem 1rem;
+        background: var(--linen);
+        border-radius: var(--radius-sm);
+        color: var(--ink-soft);
+      }
 
-  /* table of contents */
-  .toc h2 { font: 700 .875rem/1.2 var(--sans); text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); }
-  .toc ol { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; max-width: none; }
-  .toc a {
-    display: inline-block; padding: .375rem .875rem; border: 1px solid var(--rule); border-radius: var(--radius-pill);
-    background: var(--linen); font-size: .9375rem; font-weight: 700; text-decoration: none;
-  }
-  .toc a:hover { border-color: var(--ink); }
+      /* table of contents */
+      .toc h2 {
+        font: 700 0.875rem/1.2 var(--sans);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-soft);
+      }
+      .toc ol {
+        list-style: none;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        max-width: none;
+      }
+      .toc a {
+        display: inline-block;
+        padding: 0.375rem 0.875rem;
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-pill);
+        background: var(--linen);
+        font-size: 0.9375rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .toc a:hover {
+        border-color: var(--ink);
+      }
 
-  /* small visual examples */
-  .example { margin: 1rem 0 0; padding: 1rem; background: var(--linen); border-radius: var(--radius-sm); }
-  .example figcaption { margin-top: .625rem; font-size: .9375rem; color: var(--ink-soft); }
-  .mini-table { width: auto; border-collapse: separate; border-spacing: 3px; font-size: 1rem; }
-  .mini-table th { padding: .375rem .75rem; text-align: left; font-weight: 700; background: var(--label); border-radius: .375rem; }
-  .mini-table td { padding: .375rem .75rem; background: var(--paper); border-radius: .375rem; }
-  .mini-table b { font-weight: 700; color: var(--ending); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
-  .mini-table td.hl { background: var(--straw); outline: 3px solid var(--ink); outline-offset: -3px; }
-  .mini-table td.hl b { color: #000; }
+      /* small visual examples */
+      .example {
+        margin: 1rem 0 0;
+        padding: 1rem;
+        background: var(--linen);
+        border-radius: var(--radius-sm);
+      }
+      .example figcaption {
+        margin-top: 0.625rem;
+        font-size: 0.9375rem;
+        color: var(--ink-soft);
+      }
+      .mini-table {
+        width: auto;
+        border-collapse: separate;
+        border-spacing: 3px;
+        font-size: 1rem;
+      }
+      .mini-table th {
+        padding: 0.375rem 0.75rem;
+        text-align: left;
+        font-weight: 700;
+        background: var(--label);
+        border-radius: 0.375rem;
+      }
+      .mini-table td {
+        padding: 0.375rem 0.75rem;
+        background: var(--paper);
+        border-radius: 0.375rem;
+      }
+      .mini-table b {
+        font-weight: 700;
+        color: var(--ending);
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 3px;
+      }
+      .mini-table td.hl {
+        background: var(--straw);
+        outline: 3px solid var(--ink);
+        outline-offset: -3px;
+      }
+      .mini-table td.hl b {
+        color: #000;
+      }
 
-  .stripes { display: flex; flex-wrap: wrap; gap: .375rem; }
-  .stripes span { padding: .375rem .75rem; border-radius: var(--radius-sm); color: #fff; font-weight: 700; font-size: .9375rem; }
-  .stripes .off { background: var(--paper) !important; color: var(--ink-soft); box-shadow: inset 0 0 0 2px var(--rule); }
+      .stripes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+      }
+      .stripes span {
+        padding: 0.375rem 0.75rem;
+        border-radius: var(--radius-sm);
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.9375rem;
+      }
+      .stripes .off {
+        background: var(--paper) !important;
+        color: var(--ink-soft);
+        box-shadow: inset 0 0 0 2px var(--rule);
+      }
 
-  .quiz-sample { font: 400 1.25rem/1.6 var(--serif); }
-  .quiz-sample .gap { display: inline-block; padding: 0 .5rem; border-bottom: 2px solid var(--ink); font-weight: 700; }
-  .quiz-sample small { font: 700 .75rem var(--sans); margin-left: .25rem; padding: .0625rem .375rem; border-radius: var(--radius-pill); background: var(--rule); vertical-align: 2px; }
-  .letters-sample { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .75rem; }
-  .letters-sample span { min-width: 2.25rem; padding: .25rem .5rem; text-align: center; border: 1px solid var(--rule); border-radius: .5rem; background: var(--paper); font-size: 1.0625rem; }
+      .quiz-sample {
+        font: 400 1.25rem/1.6 var(--serif);
+      }
+      .quiz-sample .gap {
+        display: inline-block;
+        padding: 0 0.5rem;
+        border-bottom: 2px solid var(--ink);
+        font-weight: 700;
+      }
+      .quiz-sample small {
+        font: 700 0.75rem var(--sans);
+        margin-left: 0.25rem;
+        padding: 0.0625rem 0.375rem;
+        border-radius: var(--radius-pill);
+        background: var(--rule);
+        vertical-align: 2px;
+      }
+      .letters-sample {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-top: 0.75rem;
+      }
+      .letters-sample span {
+        min-width: 2.25rem;
+        padding: 0.25rem 0.5rem;
+        text-align: center;
+        border: 1px solid var(--rule);
+        border-radius: 0.5rem;
+        background: var(--paper);
+        font-size: 1.0625rem;
+      }
 
-  .leagues { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: .625rem; margin-top: 1rem; }
-  .league { padding: .75rem 1rem; border-radius: var(--radius-sm); border: 2px solid var(--edge); background: var(--tint); color: var(--ink-l); }
-  .league b { display: block; font: 700 1.25rem/1.2 var(--serif); }
-  .league span { font-size: .875rem; }
-  .league i { display: block; height: .375rem; margin-top: .5rem; border-radius: var(--radius-pill); background: var(--mark); }
-  .l-bronze  { --mark: #8B5A2B; --tint: #F5E6D8; --edge: #A06A38; --ink-l: #5E3A17; }
-  .l-silver  { --mark: #5F6772; --tint: #E9ECF0; --edge: #7D8591; --ink-l: #3B424C; }
-  .l-gold    { --mark: #B38A12; --tint: #FAF0CE; --edge: #C99D1C; --ink-l: #6B5000; }
-  .l-diamond { --mark: #1F7FA8; --tint: #DDF1F8; --edge: #2E93BE; --ink-l: #0F4E6A; }
+      .leagues {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+        gap: 0.625rem;
+        margin-top: 1rem;
+      }
+      .league {
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius-sm);
+        border: 2px solid var(--edge);
+        background: var(--tint);
+        color: var(--ink-l);
+      }
+      .league b {
+        display: block;
+        font: 700 1.25rem/1.2 var(--serif);
+      }
+      .league span {
+        font-size: 0.875rem;
+      }
+      .league i {
+        display: block;
+        height: 0.375rem;
+        margin-top: 0.5rem;
+        border-radius: var(--radius-pill);
+        background: var(--mark);
+      }
+      .l-bronze {
+        --mark: #8b5a2b;
+        --tint: #f5e6d8;
+        --edge: #a06a38;
+        --ink-l: #5e3a17;
+      }
+      .l-silver {
+        --mark: #5f6772;
+        --tint: #e9ecf0;
+        --edge: #7d8591;
+        --ink-l: #3b424c;
+      }
+      .l-gold {
+        --mark: #b38a12;
+        --tint: #faf0ce;
+        --edge: #c99d1c;
+        --ink-l: #6b5000;
+      }
+      .l-diamond {
+        --mark: #1f7fa8;
+        --tint: #ddf1f8;
+        --edge: #2e93be;
+        --ink-l: #0f4e6a;
+      }
 
-  .week-sample { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .375rem; align-items: end; height: 6rem; max-width: 20rem; list-style: none; padding: 0; margin: 0; }
-  .week-sample li { display: grid; justify-items: center; gap: .25rem; font-size: .75rem; color: var(--ink-soft); }
-  .week-sample i { width: 100%; max-width: 1.75rem; height: max(calc(var(--h) * .05rem), 3px); border-radius: 4px 4px 0 0; background: #B9BEC9; }
-  .week-sample .s i { background: linear-gradient(to top, #A30F1A, #D9261C 55%, #F4612A); }
-  .week-sample .s { color: #A30F1A; font-weight: 700; }
+      .week-sample {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.375rem;
+        align-items: end;
+        height: 6rem;
+        max-width: 20rem;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .week-sample li {
+        display: grid;
+        justify-items: center;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        color: var(--ink-soft);
+      }
+      .week-sample i {
+        width: 100%;
+        max-width: 1.75rem;
+        height: max(calc(var(--h) * 0.05rem), 3px);
+        border-radius: 4px 4px 0 0;
+        background: #b9bec9;
+      }
+      .week-sample .s i {
+        background: linear-gradient(to top, #a30f1a, #d9261c 55%, #f4612a);
+      }
+      .week-sample .s {
+        color: #a30f1a;
+        font-weight: 700;
+      }
 
-  .back-top { margin-top: 1rem; font-size: .9375rem; }
-</style>
-</head>
-<body>
-<header class="masthead">
-  <div class="masthead-bar"><nav class="languages" aria-label="Site"><a href="./">← Blabilingo</a></nav></div>
-  <h1>How Blabilingo works</h1>
-  <p class="lede">A short guide to the tables, the quiz, your progress and your account. Read it once, then go and practise.</p>
-</header>
-
-<main>
-<div class="guide">
-
-  <nav class="guide-card toc" aria-labelledby="toc-title">
-    <h2 id="toc-title">On this page</h2>
-    <ol>
-      <li><a href="#what">What it is</a></li>
-      <li><a href="#start">Getting started</a></li>
-      <li><a href="#quiz">Taking a quiz</a></li>
-      <li><a href="#progress">Your progress</a></li>
-      <li><a href="#forgotten">Words you keep forgetting</a></li>
-      <li><a href="#accounts">Accounts</a></li>
-      <li><a href="#account-page">The account page</a></li>
-      <li><a href="#after-quiz">After a quiz</a></li>
-      <li><a href="#tips">Tips</a></li>
-    </ol>
-  </nav>
-
-  <section class="guide-card" id="what">
-    <h2>What Blabilingo is</h2>
-    <p>Blabilingo helps you practise the endings that make a language hard. You study the tables, then fill in the gaps in real sentences.</p>
-    <ul>
-      <li><b lang="pl">Końcówki</b>, for Polish: noun and adjective cases, the past and future tenses, and numbers. Idioms are mixed into the cases and past-tense quizzes.</li>
-      <li><b lang="es">Terminaciones</b>, for Spanish: the present, past and future tenses, and numbers, in Latin American usage. Colombian idioms are mixed into the tense quizzes.</li>
-    </ul>
-  </section>
-
-  <section class="guide-card" id="start">
-    <h2>Getting started</h2>
-    <ol>
-      <li><b>Pick a language</b> on the <a href="./">front page</a>.</li>
-      <li><b>Pick a topic</b> with the big buttons under the title, such as Cases or Past tense.</li>
-      <li><b>Study the tables.</b> The <b>Endings</b> button (called <b>Forms</b> for the tenses) shows every ending, with examples and notes.</li>
-      <li><b>Take a quiz</b> with the <b>Quiz</b> button.</li>
-    </ol>
-    <figure class="example">
-      <table class="mini-table" aria-label="Example: the present tense of hablar">
-        <tr><th scope="row" lang="es">yo</th><td lang="es">habl<b>o</b></td></tr>
-        <tr><th scope="row" lang="es">tú</th><td lang="es">habl<b>as</b></td></tr>
-        <tr><th scope="row" lang="es">nosotros</th><td class="hl" lang="es">habl<b>amos</b></td></tr>
-      </table>
-      <figcaption>In the tables, the ending is red and underlined. After a quiz answer, the cell with your answer turns yellow.</figcaption>
-    </figure>
-
-    <h3>Choose what to practise</h3>
-    <p>The coloured stripes under the topics are the filter. Each stripe is one group: a case, a verb group or a number rule.</p>
-    <figure class="example">
-      <div class="stripes" aria-hidden="true">
-        <span style="background: var(--gen)" lang="pl">Dopełniacz</span>
-        <span class="off" lang="pl">Celownik</span>
-        <span class="off" lang="pl">Biernik</span>
-        <span style="background: var(--ins)" lang="pl">Narzędnik</span>
+      .back-top {
+        margin-top: 1rem;
+        font-size: 0.9375rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="masthead-bar">
+        <nav class="languages" aria-label="Site">
+          <a href="./">← Blabylingo</a>
+        </nav>
       </div>
-      <figcaption>Two cases picked, two left out.</figcaption>
-    </figure>
-    <ul>
-      <li>When everything is picked, a click on a stripe picks <b>only that one</b>.</li>
-      <li>Click more stripes to add them, or click again to take one away.</li>
-      <li><b>Select all</b> brings every group back.</li>
-    </ul>
-    <p>The tables, the quiz and the number of sentences all follow your choice. The page remembers it next time.</p>
-    <p>The language links at the top of a language page (Polski, Español) keep your place. If you are on the past-tense quiz in Polish, the Español link opens the Spanish past-tense quiz.</p>
-  </section>
+      <h1>How Blabylingo works</h1>
+      <p class="lede">
+        A short guide to the tables, the quiz, your progress and your account.
+        Read it once, then go and practise.
+      </p>
+    </header>
 
-  <section class="guide-card" id="quiz">
-    <h2>Taking a quiz</h2>
-    <p>You get one sentence at a time. The gap shows the word in its dictionary form. Your job is to put it in the right form.</p>
-    <figure class="example">
-      <p class="quiz-sample" lang="pl">Nie mam <span class="gap">siostra</span>.</p>
-      <figcaption>A small badge next to the word, such as <i>plural</i>, gives a hint. Longer hints appear under the sentence.</figcaption>
-    </figure>
+    <main>
+      <div class="guide">
+        <nav class="guide-card toc" aria-labelledby="toc-title">
+          <h2 id="toc-title">On this page</h2>
+          <ol>
+            <li><a href="#what">What it is</a></li>
+            <li><a href="#start">Getting started</a></li>
+            <li><a href="#quiz">Taking a quiz</a></li>
+            <li><a href="#progress">Your progress</a></li>
+            <li><a href="#forgotten">Words you keep forgetting</a></li>
+            <li><a href="#accounts">Accounts</a></li>
+            <li><a href="#account-page">The account page</a></li>
+            <li><a href="#after-quiz">After a quiz</a></li>
+            <li><a href="#tips">Tips</a></li>
+          </ol>
+        </nav>
 
-    <h3>Before you start</h3>
-    <ul>
-      <li><b>How to answer.</b> <i>Type it here</i> checks your spelling. <i>Write it in my notebook</i> shows only the question: you write the answer on paper, reveal it, and mark yourself.</li>
-      <li><b>How many sentences.</b> 10, 20, 50 or all of them.</li>
-      <li><b>Which sentences first.</b> <i>New and missed ones first</i> puts sentences you have never seen or got wrong last time at the front, and mastered ones at the back. <i>Random</i> mixes them all.</li>
-      <li><b>Which words.</b> Some topics let you narrow it down, for example to idioms only, to pronouns, or to the number itself.</li>
-      <li>You can choose whether the quiz <b>tells you which group</b> each sentence needs, or lets you work it out.</li>
-    </ul>
+        <section class="guide-card" id="what">
+          <h2>What Blabylingo is</h2>
+          <p>
+            Blabylingo helps you practise the endings that make a language hard.
+            You study the tables, then fill in the gaps in real sentences.
+          </p>
+          <ul>
+            <li>
+              <b lang="pl">Końcówki</b>, for Polish: noun and adjective cases,
+              the past and future tenses, and numbers. Idioms are mixed into the
+              cases and past-tense quizzes.
+            </li>
+            <li>
+              <b lang="es">Terminaciones</b>, for Spanish: the present, past and
+              future tenses, and numbers, in Latin American usage. Colombian
+              idioms are mixed into the tense quizzes.
+            </li>
+          </ul>
+        </section>
 
-    <h3>Typing mode</h3>
-    <ul>
-      <li>Type the word and press <b>Check</b> (or Enter).</li>
-      <li>If it is wrong, you see <i>Not quite</i> and can try again. <i>Nearly</i> means the letters are right but an accent or special letter is missing.</li>
-      <li>The letter buttons under the box type the special letters for you, such as <span lang="pl">ą ę ł</span> or <span lang="es">ñ á ¿</span>.</li>
-      <li><b>Reveal answer</b> shows the answer if you are stuck.</li>
-    </ul>
-    <div class="letters-sample" aria-hidden="true" lang="pl"><span>ą</span><span>ć</span><span>ę</span><span>ł</span><span>ń</span><span>ó</span><span>ś</span><span>ź</span><span>ż</span></div>
-    <p>Only an answer that is right the first time counts as right in your progress. Getting there on a second try still shows on the results screen.</p>
+        <section class="guide-card" id="start">
+          <h2>Getting started</h2>
+          <ol>
+            <li><b>Pick a language</b> on the <a href="./">front page</a>.</li>
+            <li>
+              <b>Pick a topic</b> with the big buttons under the title, such as
+              Cases or Past tense.
+            </li>
+            <li>
+              <b>Study the tables.</b> The <b>Endings</b> button (called
+              <b>Forms</b> for the tenses) shows every ending, with examples and
+              notes.
+            </li>
+            <li><b>Take a quiz</b> with the <b>Quiz</b> button.</li>
+          </ol>
+          <figure class="example">
+            <table
+              class="mini-table"
+              aria-label="Example: the present tense of hablar"
+            >
+              <tr>
+                <th scope="row" lang="es">yo</th>
+                <td lang="es">habl<b>o</b></td>
+              </tr>
+              <tr>
+                <th scope="row" lang="es">tú</th>
+                <td lang="es">habl<b>as</b></td>
+              </tr>
+              <tr>
+                <th scope="row" lang="es">nosotros</th>
+                <td class="hl" lang="es">habl<b>amos</b></td>
+              </tr>
+            </table>
+            <figcaption>
+              In the tables, the ending is red and underlined. After a quiz
+              answer, the cell with your answer turns yellow.
+            </figcaption>
+          </figure>
 
-    <h3>Notebook mode</h3>
-    <p>Write the answer in your notebook, then press <b>Reveal answer</b>. Mark yourself with <b>I got it right</b> or <b>I got it wrong</b>, or press Y or N. You can switch between typing and notebook mode in the middle of a quiz.</p>
+          <h3>Choose what to practise</h3>
+          <p>
+            The coloured stripes under the topics are the filter. Each stripe is
+            one group: a case, a verb group or a number rule.
+          </p>
+          <figure class="example">
+            <div class="stripes" aria-hidden="true">
+              <span style="background: var(--gen)" lang="pl">Dopełniacz</span>
+              <span class="off" lang="pl">Celownik</span>
+              <span class="off" lang="pl">Biernik</span>
+              <span style="background: var(--ins)" lang="pl">Narzędnik</span>
+            </div>
+            <figcaption>Two cases picked, two left out.</figcaption>
+          </figure>
+          <ul>
+            <li>
+              When everything is picked, a click on a stripe picks
+              <b>only that one</b>.
+            </li>
+            <li>
+              Click more stripes to add them, or click again to take one away.
+            </li>
+            <li><b>Select all</b> brings every group back.</li>
+          </ul>
+          <p>
+            The tables, the quiz and the number of sentences all follow your
+            choice. The page remembers it next time.
+          </p>
+          <p>
+            The language links at the top of a language page (Polski, Español)
+            keep your place. If you are on the past-tense quiz in Polish, the
+            Español link opens the Spanish past-tense quiz.
+          </p>
+        </section>
 
-    <h3>Help while you answer</h3>
-    <ul>
-      <li><b>Translations:</b> hover over any word to see what it means. On a phone, tap it. Nouns also show their gender in colour.</li>
-      <li><b>Hear it:</b> click or tap any word to hear it read aloud. After the reveal, click the answer to hear it too. This uses your browser's voice. Google Chrome has Polish and Spanish voices; some browsers, such as Brave, have none.</li>
-      <li><b>Show tables</b> keeps the tables open beside the quiz, like a crib sheet. Once you reveal, it marks where the answer sits.</li>
-    </ul>
+        <section class="guide-card" id="quiz">
+          <h2>Taking a quiz</h2>
+          <p>
+            You get one sentence at a time. The gap shows the word in its
+            dictionary form. Your job is to put it in the right form.
+          </p>
+          <figure class="example">
+            <p class="quiz-sample" lang="pl">
+              Nie mam <span class="gap">siostra</span>.
+            </p>
+            <figcaption>
+              A small badge next to the word, such as <i>plural</i>, gives a
+              hint. Longer hints appear under the sentence.
+            </figcaption>
+          </figure>
 
-    <h3>After each answer</h3>
-    <p>You see the answer, other correct forms, the English translation, a short note on why this form is used, and the table with the right cell highlighted. Press <b>Next sentence</b> or Enter to go on.</p>
+          <h3>Before you start</h3>
+          <ul>
+            <li>
+              <b>How to answer.</b> <i>Type it here</i> checks your spelling.
+              <i>Write it in my notebook</i> shows only the question: you write
+              the answer on paper, reveal it, and mark yourself.
+            </li>
+            <li><b>How many sentences.</b> 10, 20, 50 or all of them.</li>
+            <li>
+              <b>Which sentences first.</b>
+              <i>New and missed ones first</i> puts sentences you have never
+              seen or got wrong last time at the front, and mastered ones at the
+              back. <i>Random</i> mixes them all.
+            </li>
+            <li>
+              <b>Which words.</b> Some topics let you narrow it down, for
+              example to idioms only, to pronouns, or to the number itself.
+            </li>
+            <li>
+              You can choose whether the quiz <b>tells you which group</b> each
+              sentence needs, or lets you work it out.
+            </li>
+          </ul>
 
-    <h3>The results screen</h3>
-    <p>A ring shows your score: right first time, right after another try, and revealed. Below it is your chart for the topic (see <a href="#after-quiz">After a quiz</a>) and the list of sentences to look at again. <b>Practise these again</b> starts a quiz with just those sentences.</p>
-    <p class="note">If you close the page in the middle of a quiz, nothing is lost. Next time, the quiz carries on from the same sentence, or you can press <b>Continue where you left off</b>.</p>
-  </section>
+          <h3>Typing mode</h3>
+          <ul>
+            <li>Type the word and press <b>Check</b> (or Enter).</li>
+            <li>
+              If it is wrong, you see <i>Not quite</i> and can try again.
+              <i>Nearly</i> means the letters are right but an accent or special
+              letter is missing.
+            </li>
+            <li>
+              The letter buttons under the box type the special letters for you,
+              such as <span lang="pl">ą ę ł</span> or
+              <span lang="es">ñ á ¿</span>.
+            </li>
+            <li><b>Reveal answer</b> shows the answer if you are stuck.</li>
+          </ul>
+          <div class="letters-sample" aria-hidden="true" lang="pl">
+            <span>ą</span><span>ć</span><span>ę</span><span>ł</span
+            ><span>ń</span><span>ó</span><span>ś</span><span>ź</span
+            ><span>ż</span>
+          </div>
+          <p>
+            Only an answer that is right the first time counts as right in your
+            progress. Getting there on a second try still shows on the results
+            screen.
+          </p>
 
-  <section class="guide-card" id="progress">
-    <h2>Your progress</h2>
-    <p>Every answer is saved. The quiz start screen shows a table for the topic, one row per group:</p>
-    <ul>
-      <li><b>Seen:</b> how many of its sentences you have answered.</li>
-      <li><b>Mastered:</b> right twice in a row.</li>
-      <li><b>To review:</b> wrong the last time.</li>
-      <li><b>Accuracy:</b> the share of all your answers that were right.</li>
-    </ul>
-    <p>Each question also tells you how you did on it before, for example <i>Right last time. 3 of 4 so far.</i></p>
-    <p><b>Reset progress</b>, under the table, deletes the saved answers for every topic in that language. It asks you to confirm first. When you are signed in, it clears them from your account too.</p>
-  </section>
+          <h3>Notebook mode</h3>
+          <p>
+            Write the answer in your notebook, then press <b>Reveal answer</b>.
+            Mark yourself with <b>I got it right</b> or <b>I got it wrong</b>,
+            or press Y or N. You can switch between typing and notebook mode in
+            the middle of a quiz.
+          </p>
 
-  <section class="guide-card" id="forgotten">
-    <h2>Words you keep forgetting</h2>
-    <p>A word you have got wrong two or more times appears in a strip called <b>Words you keep forgetting</b>, above the tables and the quiz. Hover over a word to see the forms you need.</p>
-    <ul>
-      <li>The <b>Practise</b> buttons under the list start a quiz with the sentences you missed for those words, one topic at a time.</li>
-      <li>When your latest answer for a word is right, it leaves the list.</li>
-      <li>If you get it wrong again later, it comes back.</li>
-    </ul>
-  </section>
+          <h3>Help while you answer</h3>
+          <ul>
+            <li>
+              <b>Translations:</b> hover over any word to see what it means. On
+              a phone, tap it. Nouns also show their gender in colour.
+            </li>
+            <li>
+              <b>Hear it:</b> click or tap any word to hear it read aloud. After
+              the reveal, click the answer to hear it too. This uses your
+              browser's voice. Google Chrome has Polish and Spanish voices; some
+              browsers, such as Brave, have none.
+            </li>
+            <li>
+              <b>Show tables</b> keeps the tables open beside the quiz, like a
+              crib sheet. Once you reveal, it marks where the answer sits.
+            </li>
+          </ul>
 
-  <section class="guide-card" id="accounts">
-    <h2>Accounts</h2>
-    <p>You do not need an account. Without one, your progress is kept in this browser only. Another browser or another device starts from zero.</p>
-    <p>Sign in with Google (the <b>Sign in</b> link at the top right) to keep your progress in your account. Then:</p>
-    <ul>
-      <li>your answers are saved in the browser and in your account, so you can carry on on another device;</li>
-      <li>answers you gave in this browser before signing in are added to your account;</li>
-      <li>you get a daily streak and a chart of this week's answers;</li>
-      <li>the <a href="account.html">account page</a> shows all of it.</li>
-    </ul>
-    <p class="note">Accounts only work when the site is served over http, for example on GitHub Pages or with <code>./serve-for-phone.sh</code>. If you open the files straight from your computer, practice still works, but without accounts.</p>
-  </section>
+          <h3>After each answer</h3>
+          <p>
+            You see the answer, other correct forms, the English translation, a
+            short note on why this form is used, and the table with the right
+            cell highlighted. Press <b>Next sentence</b> or Enter to go on.
+          </p>
 
-  <section class="guide-card" id="account-page">
-    <h2>The account page</h2>
-    <p>Click your name at the top of any page to open it.</p>
-    <h3>Streak and this week</h3>
-    <p>The <b>This week</b> card leads with your streak (days in a row with at least one answer), next to your best streak and how many answers you gave in the past seven days. Its bars show the answers for each day, in every language. Days that belong to your current streak glow red.</p>
-    <figure class="example">
-      <ol class="week-sample" aria-label="Example week: the last four days are streak days">
-        <li><i style="--h: 30"></i>Wed</li>
-        <li><i style="--h: 0"></i>Thu</li>
-        <li class="s"><i style="--h: 60"></i>Fri</li>
-        <li class="s"><i style="--h: 85"></i>Sat</li>
-        <li class="s"><i style="--h: 40"></i>Sun</li>
-        <li class="s"><i style="--h: 70"></i>Mon</li>
-        <li class="s"><i style="--h: 50"></i>Today</li>
-      </ol>
-      <figcaption>A skipped day breaks the streak. The red days are the current one.</figcaption>
-    </figure>
-    <h3>Leaderboard</h3>
-    <p>See how you compare with other learners, for today, this week (it starts again every Monday) and all time. One table counts right answers. The other counts sentences you have mastered, which means right twice in a row. Every language counts towards your score.</p>
-    <p>You appear under your nickname. Until you choose one you show as “A learner”, so other learners never see your Google name. Untick <b>Show me on the leaderboard</b> to take yourself off it completely.</p>
+          <h3>The results screen</h3>
+          <p>
+            A ring shows your score: right first time, right after another try,
+            and revealed. Below it is your chart for the topic (see
+            <a href="#after-quiz">After a quiz</a>) and the list of sentences to
+            look at again. <b>Practise these again</b> starts a quiz with just
+            those sentences.
+          </p>
+          <p class="note">
+            If you close the page in the middle of a quiz, nothing is lost. Next
+            time, the quiz carries on from the same sentence, or you can press
+            <b>Continue where you left off</b>.
+          </p>
+        </section>
 
-    <h3>Language tabs</h3>
-    <p>If you practise more than one language, tabs switch between them. Each tab has its own numbers: questions answered, accuracy, often forgotten words and topic charts.</p>
-    <h3>Often forgotten</h3>
-    <p>The same list as on the language pages. Each <b>Practise</b> button opens that topic and starts a quiz with the missed sentences.</p>
-    <h3>Topic charts</h3>
-    <p>Each topic has a radar chart. Every corner is one group, such as one case or one verb group. The further a shape reaches towards a corner, the better you know that group.</p>
-    <ul>
-      <li>The <b>lighter, larger shape</b> shows sentences you have <b>answered right</b> at least once.</li>
-      <li>The <b>darker shape</b> inside it shows sentences you have <b>mastered</b>: right twice in a row.</li>
-    </ul>
-    <p>Hover over or tap a corner for the exact numbers.</p>
-    <h3>Leagues</h3>
-    <p>Each chart sits in a league. It depends on your best group in that topic: the share of its sentences you have answered right or mastered, whichever is higher.</p>
-    <div class="leagues">
-      <div class="league l-bronze"><b>Bronze</b><span>up to 30%</span><i></i></div>
-      <div class="league l-silver"><b>Silver</b><span>up to 70%</span><i></i></div>
-      <div class="league l-gold"><b>Gold</b><span>up to 99%</span><i></i></div>
-      <div class="league l-diamond"><b>Diamond</b><span>100%</span><i></i></div>
-    </div>
-    <p>The card takes the league's colours. In Bronze and Silver the chart is zoomed in, so that your first steps fill the chart. Bronze shows up to 30% at the edge, Silver up to 70%. From Gold on, the edge is 100%. The zoom is written under each chart.</p>
-  </section>
+        <section class="guide-card" id="progress">
+          <h2>Your progress</h2>
+          <p>
+            Every answer is saved. The quiz start screen shows a table for the
+            topic, one row per group:
+          </p>
+          <ul>
+            <li><b>Seen:</b> how many of its sentences you have answered.</li>
+            <li><b>Mastered:</b> right twice in a row.</li>
+            <li><b>To review:</b> wrong the last time.</li>
+            <li>
+              <b>Accuracy:</b> the share of all your answers that were right.
+            </li>
+          </ul>
+          <p>
+            Each question also tells you how you did on it before, for example
+            <i>Right last time. 3 of 4 so far.</i>
+          </p>
+          <p>
+            <b>Reset progress</b>, under the table, deletes the saved answers
+            for every topic in that language. It asks you to confirm first. When
+            you are signed in, it clears them from your account too.
+          </p>
+        </section>
 
-  <section class="guide-card" id="after-quiz">
-    <h2>After a quiz</h2>
-    <p>The results screen shows your chart for the topic, as it was before the quiz.</p>
-    <ul>
-      <li>A <b>dashed outline</b> stays behind to show where you started.</li>
-      <li>The shape then <b>grows</b> to where you are now.</li>
-      <li>If you reached a new league, the card changes colour, the chart zooms out, and a message cheers you on, such as <i>Up to Silver! Nice work.</i></li>
-    </ul>
-    <p>The chart appears for topics with at least three groups.</p>
-  </section>
+        <section class="guide-card" id="forgotten">
+          <h2>Words you keep forgetting</h2>
+          <p>
+            A word you have got wrong two or more times appears in a strip
+            called <b>Words you keep forgetting</b>, above the tables and the
+            quiz. Hover over a word to see the forms you need.
+          </p>
+          <ul>
+            <li>
+              The <b>Practise</b> buttons under the list start a quiz with the
+              sentences you missed for those words, one topic at a time.
+            </li>
+            <li>
+              When your latest answer for a word is right, it leaves the list.
+            </li>
+            <li>If you get it wrong again later, it comes back.</li>
+          </ul>
+        </section>
 
-  <section class="guide-card" id="tips">
-    <h2>Tips</h2>
-    <h3>Practise on your phone</h3>
-    <p>The site works on GitHub Pages, so you can open it on your phone from there. To use your own copy at home, run <code>./serve-for-phone.sh</code> on your computer. It prints an address. Open it on your phone, on the same Wi-Fi. Keep the computer awake while you practise.</p>
-    <p>On a narrow screen, the Spanish verb tables are split by verb type: one small table each for -ar, -er and -ir verbs, so you do not have to scroll sideways.</p>
-    <h3>Keep your streak</h3>
-    <p>One answer on a day is enough to count that day, in any language. If you skip a day, the streak starts again from one. Streaks need you to be signed in.</p>
-    <h3>Polish vocative plural</h3>
-    <p>The vocative plural is the same as the nominative plural, so its table shows the nominative's endings.</p>
-    <p class="back-top"><a href="#toc-title">Back to the top</a></p>
-  </section>
+        <section class="guide-card" id="accounts">
+          <h2>Accounts</h2>
+          <p>
+            You do not need an account. Without one, your progress is kept in
+            this browser only. Another browser or another device starts from
+            zero.
+          </p>
+          <p>
+            Sign in with Google (the <b>Sign in</b> link at the top right) to
+            keep your progress in your account. Then:
+          </p>
+          <ul>
+            <li>
+              your answers are saved in the browser and in your account, so you
+              can carry on on another device;
+            </li>
+            <li>
+              answers you gave in this browser before signing in are added to
+              your account;
+            </li>
+            <li>you get a daily streak and a chart of this week's answers;</li>
+            <li>
+              the <a href="account.html">account page</a> shows all of it.
+            </li>
+          </ul>
+          <p class="note">
+            Accounts only work when the site is served over http, for example on
+            GitHub Pages or with <code>./serve-for-phone.sh</code>. If you open
+            the files straight from your computer, practice still works, but
+            without accounts.
+          </p>
+        </section>
 
-</div>
-</main>
-</body>
+        <section class="guide-card" id="account-page">
+          <h2>The account page</h2>
+          <p>Click your name at the top of any page to open it.</p>
+          <h3>Streak and this week</h3>
+          <p>
+            The <b>This week</b> card leads with your streak (days in a row with
+            at least one answer), next to your best streak and how many answers
+            you gave in the past seven days. Its bars show the answers for each
+            day, in every language. Days that belong to your current streak glow
+            red.
+          </p>
+          <figure class="example">
+            <ol
+              class="week-sample"
+              aria-label="Example week: the last four days are streak days"
+            >
+              <li><i style="--h: 30"></i>Wed</li>
+              <li><i style="--h: 0"></i>Thu</li>
+              <li class="s"><i style="--h: 60"></i>Fri</li>
+              <li class="s"><i style="--h: 85"></i>Sat</li>
+              <li class="s"><i style="--h: 40"></i>Sun</li>
+              <li class="s"><i style="--h: 70"></i>Mon</li>
+              <li class="s"><i style="--h: 50"></i>Today</li>
+            </ol>
+            <figcaption>
+              A skipped day breaks the streak. The red days are the current one.
+            </figcaption>
+          </figure>
+          <h3>Leaderboard</h3>
+          <p>
+            See how you compare with other learners, for today, this week (it
+            starts again every Monday) and all time. One table counts right
+            answers. The other counts sentences you have mastered, which means
+            right twice in a row. Every language counts towards your score.
+          </p>
+          <p>
+            You appear under your nickname. Until you choose one you show as “A
+            learner”, so other learners never see your Google name. Untick
+            <b>Show me on the leaderboard</b> to take yourself off it
+            completely.
+          </p>
+
+          <h3>Language tabs</h3>
+          <p>
+            If you practise more than one language, tabs switch between them.
+            Each tab has its own numbers: questions answered, accuracy, often
+            forgotten words and topic charts.
+          </p>
+          <h3>Often forgotten</h3>
+          <p>
+            The same list as on the language pages. Each <b>Practise</b> button
+            opens that topic and starts a quiz with the missed sentences.
+          </p>
+          <h3>Topic charts</h3>
+          <p>
+            Each topic has a radar chart. Every corner is one group, such as one
+            case or one verb group. The further a shape reaches towards a
+            corner, the better you know that group.
+          </p>
+          <ul>
+            <li>
+              The <b>lighter, larger shape</b> shows sentences you have
+              <b>answered right</b> at least once.
+            </li>
+            <li>
+              The <b>darker shape</b> inside it shows sentences you have
+              <b>mastered</b>: right twice in a row.
+            </li>
+          </ul>
+          <p>Hover over or tap a corner for the exact numbers.</p>
+          <h3>Leagues</h3>
+          <p>
+            Each chart sits in a league. It depends on your best group in that
+            topic: the share of its sentences you have answered right or
+            mastered, whichever is higher.
+          </p>
+          <div class="leagues">
+            <div class="league l-bronze">
+              <b>Bronze</b><span>up to 30%</span><i></i>
+            </div>
+            <div class="league l-silver">
+              <b>Silver</b><span>up to 70%</span><i></i>
+            </div>
+            <div class="league l-gold">
+              <b>Gold</b><span>up to 99%</span><i></i>
+            </div>
+            <div class="league l-diamond">
+              <b>Diamond</b><span>100%</span><i></i>
+            </div>
+          </div>
+          <p>
+            The card takes the league's colours. In Bronze and Silver the chart
+            is zoomed in, so that your first steps fill the chart. Bronze shows
+            up to 30% at the edge, Silver up to 70%. From Gold on, the edge is
+            100%. The zoom is written under each chart.
+          </p>
+        </section>
+
+        <section class="guide-card" id="after-quiz">
+          <h2>After a quiz</h2>
+          <p>
+            The results screen shows your chart for the topic, as it was before
+            the quiz.
+          </p>
+          <ul>
+            <li>
+              A <b>dashed outline</b> stays behind to show where you started.
+            </li>
+            <li>The shape then <b>grows</b> to where you are now.</li>
+            <li>
+              If you reached a new league, the card changes colour, the chart
+              zooms out, and a message cheers you on, such as
+              <i>Up to Silver! Nice work.</i>
+            </li>
+          </ul>
+          <p>The chart appears for topics with at least three groups.</p>
+        </section>
+
+        <section class="guide-card" id="tips">
+          <h2>Tips</h2>
+          <h3>Practise on your phone</h3>
+          <p>
+            The site works on GitHub Pages, so you can open it on your phone
+            from there. To use your own copy at home, run
+            <code>./serve-for-phone.sh</code> on your computer. It prints an
+            address. Open it on your phone, on the same Wi-Fi. Keep the computer
+            awake while you practise.
+          </p>
+          <p>
+            On a narrow screen, the Spanish verb tables are split by verb type:
+            one small table each for -ar, -er and -ir verbs, so you do not have
+            to scroll sideways.
+          </p>
+          <h3>Keep your streak</h3>
+          <p>
+            One answer on a day is enough to count that day, in any language. If
+            you skip a day, the streak starts again from one. Streaks need you
+            to be signed in.
+          </p>
+          <h3>Polish vocative plural</h3>
+          <p>
+            The vocative plural is the same as the nominative plural, so its
+            table shows the nominative's endings.
+          </p>
+          <p class="back-top"><a href="#toc-title">Back to the top</a></p>
+        </section>
+      </div>
+    </main>
+  </body>
 </html>

@@ -1,441 +1,680 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Your account – Blabilingo</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bona+Nova:ital,wght@0,400;0,700;1,400&family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Cpath fill='%23C1121F' d='M0 0h2v2H0z'/%3E%3Cpath fill='%231D5FBF' d='M2 0h2v2H2z'/%3E%3Cpath fill='%23FFD23F' d='M0 2h2v2H0z'/%3E%3Cpath fill='%231B7A43' d='M2 2h2v2H2z'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="core/styles.css">
-<link rel="stylesheet" href="core/radar.css">
-<link rel="stylesheet" href="core/account.css">
-</head>
-<body>
-<header class="masthead">
-  <div class="masthead-bar"><nav class="languages" aria-label="Site"><a href="./" id="back">← Blabilingo</a></nav></div>
-  <h1>Your account</h1>
-</header>
-<main>
-  <section id="account-page" class="account-page" aria-live="polite">
-    <p class="account-note">Loading…</p>
-  </section>
-</main>
-<div id="radar-tip" class="radar-tip" role="tooltip" hidden></div>
-<script>
-  if (location.protocol === 'file:') document.getElementById('account-page').innerHTML =
-    '<p class="account-note">Accounts need the site served over http. Run <code>./serve-for-phone.sh</code> and open <code>http://localhost:8000/account.html</code>.</p>';
-</script>
-<script src="languages.js"></script>
-<script>
-  // Back to the language page practised last (core/app.js remembers it), or the language chooser
-  const lastPage = (() => {
-    try {
-      const p = JSON.parse(localStorage.getItem('blabilingo.lastPage'));
-      const l = p && LANGUAGES.find(x => x.id === p.language);
-      const hash = typeof p?.hash === 'string' && /^#[\w-]+\/[\w-]+$/.test(p.hash) ? p.hash : '';
-      return l ? { id: l.id, href: `${l.id}/index.html${hash}`, name: l.app } : null;
-    } catch { return null; }
-  })();
-  if (lastPage) { const back = document.getElementById('back'); back.href = lastPage.href; back.textContent = `← ${lastPage.name}`; }
-</script>
-<script src="core/insights.js"></script>
-<script src="core/radar-popup.js"></script>
-<script src="core/nickname.js"></script>
-<script type="module">
-  import { currentUser, ensureProfile, nameOf, saveNickname, setLeaderboardHidden, signOutUser, db, collection, getDocs } from './core/cloud.js';
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Your account – Blabylingo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bona+Nova:ital,wght@0,400;0,700;1,400&family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Cpath fill='%23C1121F' d='M0 0h2v2H0z'/%3E%3Cpath fill='%231D5FBF' d='M2 0h2v2H2z'/%3E%3Cpath fill='%23FFD23F' d='M0 2h2v2H0z'/%3E%3Cpath fill='%231B7A43' d='M2 2h2v2H2z'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="core/styles.css" />
+    <link rel="stylesheet" href="core/radar.css" />
+    <link rel="stylesheet" href="core/account.css" />
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="masthead-bar">
+        <nav class="languages" aria-label="Site">
+          <a href="./" id="back">← Blabylingo</a>
+        </nav>
+      </div>
+      <h1>Your account</h1>
+    </header>
+    <main>
+      <section id="account-page" class="account-page" aria-live="polite">
+        <p class="account-note">Loading…</p>
+      </section>
+    </main>
+    <div id="radar-tip" class="radar-tip" role="tooltip" hidden></div>
+    <script>
+      if (location.protocol === "file:")
+        document.getElementById("account-page").innerHTML =
+          '<p class="account-note">Accounts need the site served over http. Run <code>./serve-for-phone.sh</code> and open <code>http://localhost:8000/account.html</code>.</p>';
+    </script>
+    <script src="languages.js"></script>
+    <script>
+      // Back to the language page practised last (core/app.js remembers it), or the language chooser
+      const lastPage = (() => {
+        try {
+          const p = JSON.parse(localStorage.getItem("blabilingo.lastPage"));
+          const l = p && LANGUAGES.find((x) => x.id === p.language);
+          const hash =
+            typeof p?.hash === "string" && /^#[\w-]+\/[\w-]+$/.test(p.hash)
+              ? p.hash
+              : "";
+          return l
+            ? { id: l.id, href: `${l.id}/index.html${hash}`, name: l.app }
+            : null;
+        } catch {
+          return null;
+        }
+      })();
+      if (lastPage) {
+        const back = document.getElementById("back");
+        back.href = lastPage.href;
+        back.textContent = `← ${lastPage.name}`;
+      }
+    </script>
+    <script src="core/insights.js"></script>
+    <script src="core/radar-popup.js"></script>
+    <script src="core/nickname.js"></script>
+    <script type="module">
+      import {
+        currentUser,
+        ensureProfile,
+        nameOf,
+        saveNickname,
+        setLeaderboardHidden,
+        signOutUser,
+        db,
+        collection,
+        getDocs,
+      } from "./core/cloud.js";
 
-  const box = document.getElementById('account-page');
-  const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
-  const dayOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const pct = a => a == null ? '–' : `${Math.round(a * 100)}%`;
-  const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
-  const joinAnd = list => list.length <= 1 ? (list[0] || '') :
-    list.length === 2 ? `${list[0]} and ${list[1]}` : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
+      const box = document.getElementById("account-page");
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"]/g,
+          (ch) =>
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch],
+        );
+      const dayOf = (d) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const pct = (a) => (a == null ? "–" : `${Math.round(a * 100)}%`);
+      const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+      const joinAnd = (list) =>
+        list.length <= 1
+          ? list[0] || ""
+          : list.length === 2
+            ? `${list[0]} and ${list[1]}`
+            : `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
 
-  // ---- pure rendering helpers: build markup strings from the account model, nothing else ----
+      // ---- pure rendering helpers: build markup strings from the account model, nothing else ----
 
-  function avatar(name) {
-    const initial = (name || '').trim().charAt(0).toUpperCase() || '?';
-    return `<div class="avatar" aria-hidden="true">${esc(initial)}</div>`;
-  }
+      function avatar(name) {
+        const initial = (name || "").trim().charAt(0).toUpperCase() || "?";
+        return `<div class="avatar" aria-hidden="true">${esc(initial)}</div>`;
+      }
 
-  function identityBlock(name, profile, langIds) {
-    const names = langIds.map(id => (LANGUAGES.find(l => l.id === id) || {}).en).filter(Boolean);
-    const practising = names.length ? `Practising ${joinAnd(names)}` : '';
-    const created = profile.createdAt && typeof profile.createdAt.toDate === 'function' ? profile.createdAt.toDate() : null;
-    const since = created ? `since ${created.toLocaleString('en-US', { month: 'long', year: 'numeric' })}` : '';
-    const line = [practising, since].filter(Boolean).join(' · ');
-    return `<div class="identity">
+      function identityBlock(name, profile, langIds) {
+        const names = langIds
+          .map((id) => (LANGUAGES.find((l) => l.id === id) || {}).en)
+          .filter(Boolean);
+        const practising = names.length ? `Practising ${joinAnd(names)}` : "";
+        const created =
+          profile.createdAt && typeof profile.createdAt.toDate === "function"
+            ? profile.createdAt.toDate()
+            : null;
+        const since = created
+          ? `since ${created.toLocaleString("en-US", { month: "long", year: "numeric" })}`
+          : "";
+        const line = [practising, since].filter(Boolean).join(" · ");
+        return `<div class="identity">
       ${avatar(name)}
       <div class="identity-text">${identityText(name, line)}</div>
     </div>`;
-  }
+      }
 
-  const identityText = (name, line) => `
+      const identityText = (name, line) => `
         <p class="identity-name"><span>${esc(name)}</span>
           <button type="button" class="link-btn identity-edit" id="edit-nickname">Change nickname</button></p>
-        ${line ? `<p class="identity-line">${esc(line)}</p>` : ''}`;
+        ${line ? `<p class="identity-line">${esc(line)}</p>` : ""}`;
 
-  const nicknameForm = (current, error = '') => `<form class="nickname-form" id="nickname-form" novalidate>
+      const nicknameForm = (
+        current,
+        error = "",
+      ) => `<form class="nickname-form" id="nickname-form" novalidate>
       <label for="nickname">Nickname</label>
       <input id="nickname" name="nickname" type="text" maxlength="${NICKNAME.NICKNAME_MAX}" autocomplete="nickname" spellcheck="false"
-        value="${esc(current)}" aria-describedby="nickname-error" ${error ? 'aria-invalid="true"' : ''} required>
+        value="${esc(current)}" aria-describedby="nickname-error" ${error ? 'aria-invalid="true"' : ""} required>
       <button type="submit" class="btn primary">Save</button>
       <button type="button" class="btn" id="nickname-cancel">Cancel</button>
-      <p class="account-error" id="nickname-error"${error ? '' : ' hidden'}>${esc(error)}</p>
+      <p class="account-error" id="nickname-error"${error ? "" : " hidden"}>${esc(error)}</p>
     </form>`;
 
-  const statTile = (value, label) => `<div class="stat-tile"><span class="stat-num">${esc(value)}</span><span class="stat-label">${esc(label)}</span></div>`;
+      const statTile = (value, label) =>
+        `<div class="stat-tile"><span class="stat-num">${esc(value)}</span><span class="stat-label">${esc(label)}</span></div>`;
 
-  // The week card: the live streak up top (it counts answers in any language, so it sits above the language
-  // switch), then answers per day for the past week; days of a live streak burn red. Counting started in
-  // October 2026, so a week with nothing logged says so instead of showing seven empty bars.
-  function weekChart(week, logged, streak, bestStreak) {
-    const total = week.reduce((sum, d) => sum + d.count, 0);
-    const max = Math.max(1, ...week.map(d => d.count));
-    const hasStreak = week.some(d => d.streak);
-    const label = d => d.today ? 'Today' : d.weekday;
-    const fullDay = d => new Date(`${d.day}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-    const bars = week.map(d => {
-      const tip = `${fullDay(d)}: ${d.count} ${d.count === 1 ? 'answer' : 'answers'}${d.streak ? ' · streak day' : ''}`;
-      return `<li class="week-col${d.streak ? ' is-streak' : ''}${d.today ? ' is-today' : ''}" tabindex="0" data-tip="${esc(tip)}" aria-label="${esc(tip)}">
+      // The week card: the live streak up top (it counts answers in any language, so it sits above the language
+      // switch), then answers per day for the past week; days of a live streak burn red. Counting started in
+      // October 2026, so a week with nothing logged says so instead of showing seven empty bars.
+      function weekChart(week, logged, streak, bestStreak) {
+        const total = week.reduce((sum, d) => sum + d.count, 0);
+        const max = Math.max(1, ...week.map((d) => d.count));
+        const hasStreak = week.some((d) => d.streak);
+        const label = (d) => (d.today ? "Today" : d.weekday);
+        const fullDay = (d) =>
+          new Date(`${d.day}T00:00:00Z`).toLocaleDateString("en-GB", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            timeZone: "UTC",
+          });
+        const bars = week
+          .map((d) => {
+            const tip = `${fullDay(d)}: ${d.count} ${d.count === 1 ? "answer" : "answers"}${d.streak ? " · streak day" : ""}`;
+            return `<li class="week-col${d.streak ? " is-streak" : ""}${d.today ? " is-today" : ""}" tabindex="0" data-tip="${esc(tip)}" aria-label="${esc(tip)}">
         <span class="week-stack" aria-hidden="true">
-          <span class="week-count">${d.count || ''}</span>
+          <span class="week-count">${d.count || ""}</span>
           <span class="week-bar" style="--h: ${(d.count / max) * 100}%"></span>
         </span>
         <span class="week-day" aria-hidden="true">${esc(label(d))}</span>
       </li>`;
-    }).join('');
-    return `<section class="week" aria-labelledby="week-title">
+          })
+          .join("");
+        return `<section class="week" aria-labelledby="week-title">
       <div class="week-head">
         <div class="week-lead">
           <h2 id="week-title">This week</h2>
-          <p class="week-streak${streak > 0 ? ' is-live' : ''}"><i class="week-flame" aria-hidden="true"></i><span class="week-streak-num">${esc(streak)}</span><span class="week-streak-label">${streak === 1 ? 'day' : 'days'} in a row</span></p>
+          <p class="week-streak${streak > 0 ? " is-live" : ""}"><i class="week-flame" aria-hidden="true"></i><span class="week-streak-num">${esc(streak)}</span><span class="week-streak-label">${streak === 1 ? "day" : "days"} in a row</span></p>
         </div>
         <dl class="week-figures">
-          <div class="week-figure"><dt>Best streak</dt><dd><b>${esc(bestStreak)}</b> ${bestStreak === 1 ? 'day' : 'days'}</dd></div>
-          <div class="week-figure"><dt>Past 7 days</dt><dd><b>${total}</b> ${total === 1 ? 'answer' : 'answers'}</dd></div>
+          <div class="week-figure"><dt>Best streak</dt><dd><b>${esc(bestStreak)}</b> ${bestStreak === 1 ? "day" : "days"}</dd></div>
+          <div class="week-figure"><dt>Past 7 days</dt><dd><b>${total}</b> ${total === 1 ? "answer" : "answers"}</dd></div>
         </dl>
       </div>
       <ol class="week-bars">${bars}</ol>
-      ${hasStreak ? '<p class="week-legend"><i aria-hidden="true"></i>Streak day</p>' : ''}
-      ${logged ? '' : '<p class="account-note">Counting starts today. Every answer you give from now on shows up here.</p>'}
+      ${hasStreak ? '<p class="week-legend"><i aria-hidden="true"></i>Streak day</p>' : ""}
+      ${logged ? "" : '<p class="account-note">Counting starts today. Every answer you give from now on shows up here.</p>'}
     </section>`;
-  }
+      }
 
-  // ---- leaderboards: right answers and mastered sentences, today / this week / all time ----
+      // ---- leaderboards: right answers and mastered sentences, today / this week / all time ----
 
-  const PERIODS = [['day', 'Today'], ['week', 'This week'], ['all', 'All time']];
-  const EMPTY = { day: 'Nobody has scored today yet. Answer a few to take the lead.', week: 'Nobody has scored this week yet.', all: 'No scores yet.' };
+      const PERIODS = [
+        ["day", "Today"],
+        ["week", "This week"],
+        ["all", "All time"],
+      ];
+      const EMPTY = {
+        day: "Nobody has scored today yet. Answer a few to take the lead.",
+        week: "Nobody has scored this week yet.",
+        all: "No scores yet.",
+      };
 
-  // Your own row comes last, after a gap, when you are below the top ten
-  function boardList(rows, period) {
-    if (!rows.length) return `<p class="board-empty">${esc(EMPTY[period])}</p>`;
-    return `<ol class="board-list">${rows.map((r, i) => `${i === rows.length - 1 && r.you && i > 0 && r.rank > rows[i - 1].rank + 1 ? '<li class="board-gap" aria-hidden="true">…</li>' : ''}
-      <li class="board-row${r.you ? ' is-you' : ''}${r.rank <= 3 ? ` top-${r.rank}` : ''}">
+      // Your own row comes last, after a gap, when you are below the top ten
+      function boardList(rows, period) {
+        if (!rows.length)
+          return `<p class="board-empty">${esc(EMPTY[period])}</p>`;
+        return `<ol class="board-list">${rows
+          .map(
+            (
+              r,
+              i,
+            ) => `${i === rows.length - 1 && r.you && i > 0 && r.rank > rows[i - 1].rank + 1 ? '<li class="board-gap" aria-hidden="true">…</li>' : ""}
+      <li class="board-row${r.you ? " is-you" : ""}${r.rank <= 3 ? ` top-${r.rank}` : ""}">
         <span class="board-rank">${r.rank}</span>
-        <span class="board-name">${esc(r.name)}${r.you ? ' <small>you</small>' : ''}</span>
+        <span class="board-name">${esc(r.name)}${r.you ? " <small>you</small>" : ""}</span>
         <span class="board-score">${r.score}</span>
-      </li>`).join('')}</ol>`;
-  }
+      </li>`,
+          )
+          .join("")}</ol>`;
+      }
 
-  function boardSection(boards, period, profile, error) {
-    const periods = PERIODS.map(([id, label]) =>
-      `<button type="button" role="tab" class="board-period" data-period="${id}" aria-selected="${id === period}">${label}</button>`).join('');
-    const tables = error
-      ? '<p class="account-note">The leaderboard could not be loaded right now. Try reloading the page.</p>'
-      : `<div class="board-tables">
+      function boardSection(boards, period, profile, error) {
+        const periods = PERIODS.map(
+          ([id, label]) =>
+            `<button type="button" role="tab" class="board-period" data-period="${id}" aria-selected="${id === period}">${label}</button>`,
+        ).join("");
+        const tables = error
+          ? '<p class="account-note">The leaderboard could not be loaded right now. Try reloading the page.</p>'
+          : `<div class="board-tables">
           <div class="board-table"><h3>Answered right</h3><div data-board="right">${boardList(boards.right[period], period)}</div></div>
           <div class="board-table"><h3>Mastered <span>right twice in a row</span></h3><div data-board="mastered">${boardList(boards.mastered[period], period)}</div></div>
         </div>`;
-    const who = profile.leaderboardHidden ? 'You are hidden, so your scores are not shared.'
-      : profile.nicknameChosen ? 'You are listed by your nickname.' : 'Choose a nickname above, or you show as “A learner”.';
-    return `<section class="board" aria-labelledby="board-title">
+        const who = profile.leaderboardHidden
+          ? "You are hidden, so your scores are not shared."
+          : profile.nicknameChosen
+            ? "You are listed by your nickname."
+            : "Choose a nickname above, or you show as “A learner”.";
+        return `<section class="board" aria-labelledby="board-title">
       <div class="board-head">
         <h2 id="board-title">Leaderboard</h2>
         <div class="board-periods" role="tablist" aria-label="Leaderboard period">${periods}</div>
       </div>
       ${tables}
       <div class="board-foot">
-        <label class="board-opt"><input type="checkbox" id="board-show"${profile.leaderboardHidden ? '' : ' checked'}> Show me on the leaderboard</label>
+        <label class="board-opt"><input type="checkbox" id="board-show"${profile.leaderboardHidden ? "" : " checked"}> Show me on the leaderboard</label>
         <p class="board-note" id="board-note">${esc(who)} Weeks start on Monday.</p>
       </div>
     </section>`;
-  }
+      }
 
-  const SAVED_PERIOD = 'blabilingo.boardPeriod';
-  const savedPeriod = () => { try { const p = localStorage.getItem(SAVED_PERIOD); return PERIODS.some(([id]) => id === p) ? p : 'week'; } catch { return 'week'; } };
+      const SAVED_PERIOD = "blabilingo.boardPeriod";
+      const savedPeriod = () => {
+        try {
+          const p = localStorage.getItem(SAVED_PERIOD);
+          return PERIODS.some(([id]) => id === p) ? p : "week";
+        } catch {
+          return "week";
+        }
+      };
 
-  const practiceTiles = totals => `<div class="stat-tiles">
-    ${statTile(totals.answered, 'questions answered')}
-    ${statTile(pct(totals.accuracy), 'accuracy')}
+      const practiceTiles = (totals) => `<div class="stat-tiles">
+    ${statTile(totals.answered, "questions answered")}
+    ${statTile(pct(totals.accuracy), "accuracy")}
   </div>`;
 
-  const forgottenChip = (w, lang) => `<li class="forgotten-chip">
+      const forgottenChip = (w, lang) => `<li class="forgotten-chip">
       <span class="fw-word" lang="${esc(lang)}">${esc(w.base)}</span>
-      ${w.gloss ? `<span class="fw-gloss">${esc(w.gloss)}</span>` : ''}
+      ${w.gloss ? `<span class="fw-gloss">${esc(w.gloss)}</span>` : ""}
     </li>`;
 
-  // Each practise link opens the language page on that topic's forgotten sentences (#topic/forgotten)
-  function forgottenSection(words, lang, entry) {
-    const topicName = id => entry.topics.find(t => t.id === id)?.summary?.topic?.en || capitalize(id);
-    const practise = words.length ? `<p class="forgotten-practise">Practise ${INSIGHTS.forgottenByTopic(words).map(g =>
-      `<a class="btn" href="${esc(entry.id)}/index.html#${esc(g.topic)}/forgotten">${esc(topicName(g.topic))} <span>${g.keys.length} ${g.keys.length === 1 ? 'sentence' : 'sentences'}</span></a>`).join('')}</p>` : '';
-    const body = words.length
-      ? `<ul class="forgotten-list">${words.map(w => forgottenChip(w, lang)).join('')}</ul>${practise}`
-      : '<p class="account-note">Nothing forgotten yet — keep practising and this fills up.</p>';
-    return `<section class="forgotten"><h2>Often forgotten</h2>${body}</section>`;
-  }
+      // Each practise link opens the language page on that topic's forgotten sentences (#topic/forgotten)
+      function forgottenSection(words, lang, entry) {
+        const topicName = (id) =>
+          entry.topics.find((t) => t.id === id)?.summary?.topic?.en ||
+          capitalize(id);
+        const practise = words.length
+          ? `<p class="forgotten-practise">Practise ${INSIGHTS.forgottenByTopic(
+              words,
+            )
+              .map(
+                (g) =>
+                  `<a class="btn" href="${esc(entry.id)}/index.html#${esc(g.topic)}/forgotten">${esc(topicName(g.topic))} <span>${g.keys.length} ${g.keys.length === 1 ? "sentence" : "sentences"}</span></a>`,
+              )
+              .join("")}</p>`
+          : "";
+        const body = words.length
+          ? `<ul class="forgotten-list">${words.map((w) => forgottenChip(w, lang)).join("")}</ul>${practise}`
+          : '<p class="account-note">Nothing forgotten yet — keep practising and this fills up.</p>';
+        return `<section class="forgotten"><h2>Often forgotten</h2>${body}</section>`;
+      }
 
-  function groupTable(scores, visible) {
-    const rows = scores.map(s => `<tr>
+      function groupTable(scores, visible) {
+        const rows = scores
+          .map(
+            (s) => `<tr>
       <th scope="row">${esc(s.pl)} <i>${esc(s.en)}</i></th>
       <td>${s.mastered} of ${s.total}</td>
       <td>${s.correct} of ${s.total}</td>
       <td>${pct(s.accuracy)}</td>
-    </tr>`).join('');
-    // hidden for sighted readers via a wrapper: a table ignores the 1px box that .sr-only relies on
-    const table = `<table class="radar-table">
+    </tr>`,
+          )
+          .join("");
+        // hidden for sighted readers via a wrapper: a table ignores the 1px box that .sr-only relies on
+        const table = `<table class="radar-table">
       <caption class="sr-only">Group scores</caption>
       <thead><tr><th scope="col">Group</th><th scope="col">Mastered</th><th scope="col">Answered right</th><th scope="col">Accuracy</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
-    return visible ? table : `<div class="sr-only">${table}</div>`;
-  }
+        return visible ? table : `<div class="sr-only">${table}</div>`;
+      }
 
-  function topicCard(langInfo, langId, topic) {
-    if (topic.stale) return `<article class="radar-card radar-card-stale">
+      function topicCard(langInfo, langId, topic) {
+        if (topic.stale)
+          return `<article class="radar-card radar-card-stale">
       <h3>${esc(capitalize(topic.id))}</h3>
       <p class="account-note">Open ${esc(langInfo.en)} once to update this chart.</p>
       <p><a class="link-btn" href="${esc(langId)}/index.html#${esc(topic.id)}/quiz">Open ${esc(langInfo.en)}</a></p>
     </article>`;
-    const { summary, scores } = topic;
-    const mastered = scores.reduce((sum, s) => sum + s.mastered, 0);
-    const total = scores.reduce((sum, s) => sum + s.total, 0);
-    const correct = scores.reduce((sum, s) => sum + s.correct, 0);
-    const svg = INSIGHTS.radarSVG(scores, { label: summary.topic.en });
-    const bar = (cls, label, count) => {
-      const width = total > 0 ? Math.round((count / total) * 1000) / 10 : 0;
-      return `<li class="radar-bar radar-bar-${cls}">
+        const { summary, scores } = topic;
+        const mastered = scores.reduce((sum, s) => sum + s.mastered, 0);
+        const total = scores.reduce((sum, s) => sum + s.total, 0);
+        const correct = scores.reduce((sum, s) => sum + s.correct, 0);
+        const svg = INSIGHTS.radarSVG(scores, { label: summary.topic.en });
+        const bar = (cls, label, count) => {
+          const width = total > 0 ? Math.round((count / total) * 1000) / 10 : 0;
+          return `<li class="radar-bar radar-bar-${cls}">
         <span class="radar-bar-label">${label}</span>
         <span class="radar-bar-track" aria-hidden="true"><span class="radar-bar-fill" style="width: ${width}%"></span></span>
         <span class="radar-bar-count">${count}<span class="sr-only"> of ${total}</span></span>
       </li>`;
-    };
-    const league = INSIGHTS.radarLeagueFor(scores);
-    return `<article class="radar-card league-${league.id}">
+        };
+        const league = INSIGHTS.radarLeagueFor(scores);
+        return `<article class="radar-card league-${league.id}">
       <header class="radar-head">
         <h3>${esc(summary.topic.en)} <span class="radar-subtitle">${esc(summary.topic.pl)}</span></h3>
         <p class="radar-total"><b>${total}</b> sentences</p>
       </header>
       ${svg}
       <footer class="radar-foot">
-        ${svg ? `<p class="radar-zoom"><span class="radar-league">${league.name} league</span> · At ${Math.round(league.scale * 100)}% zoom</p>` : ''}
-        <ul class="radar-legend">${bar('correct', 'Answered right', correct)}${bar('mastered', 'Mastered', mastered)}</ul>
+        ${svg ? `<p class="radar-zoom"><span class="radar-league">${league.name} league</span> · At ${Math.round(league.scale * 100)}% zoom</p>` : ""}
+        <ul class="radar-legend">${bar("correct", "Answered right", correct)}${bar("mastered", "Mastered", mastered)}</ul>
       </footer>
       ${groupTable(scores, !svg)}
     </article>`;
-  }
+      }
 
-  const langInfo = id => LANGUAGES.find(l => l.id === id) || { id, lang: '', name: id, app: '', en: id };
+      const langInfo = (id) =>
+        LANGUAGES.find((l) => l.id === id) || {
+          id,
+          lang: "",
+          name: id,
+          app: "",
+          en: id,
+        };
 
-  function languagePanel(entry, tabbed, selected) {
-    const info = langInfo(entry.id);
-    const tabAttrs = tabbed ? ` role="tabpanel" id="panel-${esc(entry.id)}" aria-labelledby="tab-${esc(entry.id)}"${selected ? '' : ' hidden'}` : '';
-    return `<section class="lang-section"${tabAttrs}>
+      function languagePanel(entry, tabbed, selected) {
+        const info = langInfo(entry.id);
+        const tabAttrs = tabbed
+          ? ` role="tabpanel" id="panel-${esc(entry.id)}" aria-labelledby="tab-${esc(entry.id)}"${selected ? "" : " hidden"}`
+          : "";
+        return `<section class="lang-section"${tabAttrs}>
       ${practiceTiles(entry.totals)}
       ${forgottenSection(entry.forgotten, info.lang, entry)}
       <div class="lang-head">
         <h2><span lang="${esc(info.lang)}">${esc(info.app)}</span></h2>
         <a class="link-btn" href="${esc(entry.id)}/index.html">Practise ${esc(info.en)}</a>
       </div>
-      <div class="radar-grid">${entry.topics.map(t => topicCard(info, entry.id, t)).join('')}</div>
+      <div class="radar-grid">${entry.topics.map((t) => topicCard(info, entry.id, t)).join("")}</div>
     </section>`;
-  }
+      }
 
-  // Tabs only when there is more than one language to switch between
-  function languageTabs(languages, selectedId) {
-    if (languages.length < 2) return '';
-    return `<div class="lang-tabs" role="tablist" aria-label="Language">${languages.map(l => {
-      const info = langInfo(l.id), on = l.id === selectedId;
-      return `<button type="button" role="tab" class="lang-tab" id="tab-${esc(l.id)}" aria-controls="panel-${esc(l.id)}" aria-selected="${on}" tabindex="${on ? 0 : -1}" data-lang="${esc(l.id)}" lang="${esc(info.lang)}">${esc(info.name)}</button>`;
-    }).join('')}</div>`;
-  }
+      // Tabs only when there is more than one language to switch between
+      function languageTabs(languages, selectedId) {
+        if (languages.length < 2) return "";
+        return `<div class="lang-tabs" role="tablist" aria-label="Language">${languages
+          .map((l) => {
+            const info = langInfo(l.id),
+              on = l.id === selectedId;
+            return `<button type="button" role="tab" class="lang-tab" id="tab-${esc(l.id)}" aria-controls="panel-${esc(l.id)}" aria-selected="${on}" tabindex="${on ? 0 : -1}" data-lang="${esc(l.id)}" lang="${esc(info.lang)}">${esc(info.name)}</button>`;
+          })
+          .join("")}</div>`;
+      }
 
-  function emptyProgress() {
-    const links = LANGUAGES.map(l => `<a href="${esc(l.id)}/index.html">${esc(l.name)}</a>`).join(' or ');
-    return `<p class="account-note">You haven't practised yet — jump into ${links} to get started.</p>`;
-  }
+      function emptyProgress() {
+        const links = LANGUAGES.map(
+          (l) => `<a href="${esc(l.id)}/index.html">${esc(l.name)}</a>`,
+        ).join(" or ");
+        return `<p class="account-note">You haven't practised yet — jump into ${links} to get started.</p>`;
+      }
 
-  function progressBlock(model, progressError, selectedId) {
-    if (progressError) return '<p class="account-note">Your practice history could not be loaded right now. Try reloading the page.</p>';
-    if (!model.languages.length) return emptyProgress();
-    const tabbed = model.languages.length > 1;
-    return languageTabs(model.languages, selectedId)
-      + model.languages.map(l => languagePanel(l, tabbed, l.id === selectedId)).join('');
-  }
+      function progressBlock(model, progressError, selectedId) {
+        if (progressError)
+          return '<p class="account-note">Your practice history could not be loaded right now. Try reloading the page.</p>';
+        if (!model.languages.length) return emptyProgress();
+        const tabbed = model.languages.length > 1;
+        return (
+          languageTabs(model.languages, selectedId) +
+          model.languages
+            .map((l) => languagePanel(l, tabbed, l.id === selectedId))
+            .join("")
+        );
+      }
 
-  // The chosen language is a per-browser convenience, so it lives in localStorage
-  const SAVED_LANG = 'blabilingo.accountLanguage';
-  const savedLanguage = () => { try { return localStorage.getItem(SAVED_LANG); } catch { return null; } };
-  const saveLanguage = id => { try { localStorage.setItem(SAVED_LANG, id); } catch { /* private mode */ } };
+      // The chosen language is a per-browser convenience, so it lives in localStorage
+      const SAVED_LANG = "blabilingo.accountLanguage";
+      const savedLanguage = () => {
+        try {
+          return localStorage.getItem(SAVED_LANG);
+        } catch {
+          return null;
+        }
+      };
+      const saveLanguage = (id) => {
+        try {
+          localStorage.setItem(SAVED_LANG, id);
+        } catch {
+          /* private mode */
+        }
+      };
 
-  function selectLanguage(id, focus) {
-    box.querySelectorAll('.lang-tab').forEach(tab => {
-      const on = tab.dataset.lang === id;
-      tab.setAttribute('aria-selected', on);
-      tab.tabIndex = on ? 0 : -1;
-      if (on && focus) tab.focus();
-    });
-    box.querySelectorAll('.lang-section[role="tabpanel"]').forEach(panel => { panel.hidden = panel.id !== `panel-${id}`; });
-    hideTip();
-    saveLanguage(id);
-  }
-  box.addEventListener('click', e => { const tab = e.target.closest('.lang-tab'); if (tab) selectLanguage(tab.dataset.lang); });
-  // Arrow keys move between tabs, as in any tab list
-  box.addEventListener('keydown', e => {
-    const tab = e.target.closest('.lang-tab');
-    if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
-    const tabs = [...box.querySelectorAll('.lang-tab')], i = tabs.indexOf(tab);
-    const next = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-    e.preventDefault();
-    selectLanguage(tabs[next].dataset.lang, true);
-  });
+      function selectLanguage(id, focus) {
+        box.querySelectorAll(".lang-tab").forEach((tab) => {
+          const on = tab.dataset.lang === id;
+          tab.setAttribute("aria-selected", on);
+          tab.tabIndex = on ? 0 : -1;
+          if (on && focus) tab.focus();
+        });
+        box
+          .querySelectorAll('.lang-section[role="tabpanel"]')
+          .forEach((panel) => {
+            panel.hidden = panel.id !== `panel-${id}`;
+          });
+        hideTip();
+        saveLanguage(id);
+      }
+      box.addEventListener("click", (e) => {
+        const tab = e.target.closest(".lang-tab");
+        if (tab) selectLanguage(tab.dataset.lang);
+      });
+      // Arrow keys move between tabs, as in any tab list
+      box.addEventListener("keydown", (e) => {
+        const tab = e.target.closest(".lang-tab");
+        if (!tab || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key))
+          return;
+        const tabs = [...box.querySelectorAll(".lang-tab")],
+          i = tabs.indexOf(tab);
+        const next =
+          e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? tabs.length - 1
+              : (i + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) %
+                tabs.length;
+        e.preventDefault();
+        selectLanguage(tabs[next].dataset.lang, true);
+      });
 
-  // ---- tooltip: one element for the page, shown via delegated pointer/focus events ----
+      // ---- tooltip: one element for the page, shown via delegated pointer/focus events ----
 
-  const tip = document.getElementById('radar-tip');
-  function showTip(target) {
-    const text = target.getAttribute('data-tip');
-    if (!text) return;
-    tip.textContent = text;
-    tip.hidden = false;
-    const r = target.getBoundingClientRect();
-    const w = tip.offsetWidth, h = tip.offsetHeight;
-    let x = r.left + r.width / 2 - w / 2;
-    let y = r.top - h - 8;
-    if (y < 4) y = r.bottom + 8;
-    x = Math.max(4, Math.min(x, innerWidth - w - 4));
-    tip.style.left = `${x}px`;
-    tip.style.top = `${y}px`;
-  }
-  const hideTip = () => { tip.hidden = true; };
-  // pointerenter/focus do not bubble, but capture-phase listeners still see them on the way down
-  document.addEventListener('pointerenter', e => { const p = e.target.closest?.('[data-tip]'); if (p) showTip(p); }, true);
-  document.addEventListener('pointerleave', e => { if (e.target.closest?.('[data-tip]')) hideTip(); }, true);
-  document.addEventListener('focus', e => { const p = e.target.closest?.('[data-tip]'); if (p) showTip(p); }, true);
-  document.addEventListener('blur', () => hideTip(), true);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
+      const tip = document.getElementById("radar-tip");
+      function showTip(target) {
+        const text = target.getAttribute("data-tip");
+        if (!text) return;
+        tip.textContent = text;
+        tip.hidden = false;
+        const r = target.getBoundingClientRect();
+        const w = tip.offsetWidth,
+          h = tip.offsetHeight;
+        let x = r.left + r.width / 2 - w / 2;
+        let y = r.top - h - 8;
+        if (y < 4) y = r.bottom + 8;
+        x = Math.max(4, Math.min(x, innerWidth - w - 4));
+        tip.style.left = `${x}px`;
+        tip.style.top = `${y}px`;
+      }
+      const hideTip = () => {
+        tip.hidden = true;
+      };
+      // pointerenter/focus do not bubble, but capture-phase listeners still see them on the way down
+      document.addEventListener(
+        "pointerenter",
+        (e) => {
+          const p = e.target.closest?.("[data-tip]");
+          if (p) showTip(p);
+        },
+        true,
+      );
+      document.addEventListener(
+        "pointerleave",
+        (e) => {
+          if (e.target.closest?.("[data-tip]")) hideTip();
+        },
+        true,
+      );
+      document.addEventListener(
+        "focus",
+        (e) => {
+          const p = e.target.closest?.("[data-tip]");
+          if (p) showTip(p);
+        },
+        true,
+      );
+      document.addEventListener("blur", () => hideTip(), true);
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") hideTip();
+      });
 
-  // ---- page ----
+      // ---- page ----
 
-  const user = await currentUser();
-  if (!user) location.replace(`signin.html?next=${encodeURIComponent(location.pathname)}`);
-  else {
-    const today = dayOf(new Date());
-    const [profileResult, docsResult, boardResult] = await Promise.allSettled([
-      ensureProfile(user),
-      getDocs(collection(db, 'users', user.uid, 'progress')),
-      getDocs(collection(db, 'leaderboard')),
-    ]);
-    if (profileResult.status === 'rejected') console.warn('Could not load your account', profileResult.reason);
-    const profile = profileResult.status === 'fulfilled' ? profileResult.value : {};
+      const user = await currentUser();
+      if (!user)
+        location.replace(
+          `signin.html?next=${encodeURIComponent(location.pathname)}`,
+        );
+      else {
+        const today = dayOf(new Date());
+        const [profileResult, docsResult, boardResult] =
+          await Promise.allSettled([
+            ensureProfile(user),
+            getDocs(collection(db, "users", user.uid, "progress")),
+            getDocs(collection(db, "leaderboard")),
+          ]);
+        if (profileResult.status === "rejected")
+          console.warn("Could not load your account", profileResult.reason);
+        const profile =
+          profileResult.status === "fulfilled" ? profileResult.value : {};
 
-    const progressError = docsResult.status === 'rejected';
-    if (progressError) console.warn('Could not load your practice history', docsResult.reason);
-    const docs = progressError ? [] : docsResult.value.docs.map(d => ({ id: d.id, data: d.data() }));
-    const model = INSIGHTS.accountModel(docs, { languages: LANGUAGES });
+        const progressError = docsResult.status === "rejected";
+        if (progressError)
+          console.warn(
+            "Could not load your practice history",
+            docsResult.reason,
+          );
+        const docs = progressError
+          ? []
+          : docsResult.value.docs.map((d) => ({ id: d.id, data: d.data() }));
+        const model = INSIGHTS.accountModel(docs, { languages: LANGUAGES });
 
-    // leaderboard/{uid} must be readable by signed-in learners in the Firestore rules (see core/cloud.js)
-    const boardError = boardResult.status === 'rejected';
-    if (boardError) console.warn('Could not load the leaderboard; do the Firestore rules let signed-in users read leaderboard/?', boardResult.reason);
-    const boardsFrom = snap => {
-      const entries = snap.docs.map(d => ({ id: d.id, data: d.data() }));
-      return { right: INSIGHTS.leaderboards(entries, { today, metric: 'right', uid: user.uid }), mastered: INSIGHTS.leaderboards(entries, { today, metric: 'mastered', uid: user.uid }) };
-    };
-    let boards = boardError ? null : boardsFrom(boardResult.value);
-    let period = savedPeriod();
+        // leaderboard/{uid} must be readable by signed-in learners in the Firestore rules (see core/cloud.js)
+        const boardError = boardResult.status === "rejected";
+        if (boardError)
+          console.warn(
+            "Could not load the leaderboard; do the Firestore rules let signed-in users read leaderboard/?",
+            boardResult.reason,
+          );
+        const boardsFrom = (snap) => {
+          const entries = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+          return {
+            right: INSIGHTS.leaderboards(entries, {
+              today,
+              metric: "right",
+              uid: user.uid,
+            }),
+            mastered: INSIGHTS.leaderboards(entries, {
+              today,
+              metric: "mastered",
+              uid: user.uid,
+            }),
+          };
+        };
+        let boards = boardError ? null : boardsFrom(boardResult.value);
+        let period = savedPeriod();
 
-    const name = nameOf(profile, user);
-    const langIds = (profile.languages && profile.languages.length) ? profile.languages : model.languages.map(l => l.id);
-    const streak = INSIGHTS.currentStreak(profile, today);
-    // the tab picked last time, else the language practised last, else the first
-    const selectedId = [savedLanguage(), lastPage?.id].find(id => model.languages.some(l => l.id === id)) || model.languages[0]?.id;
+        const name = nameOf(profile, user);
+        const langIds =
+          profile.languages && profile.languages.length
+            ? profile.languages
+            : model.languages.map((l) => l.id);
+        const streak = INSIGHTS.currentStreak(profile, today);
+        // the tab picked last time, else the language practised last, else the first
+        const selectedId =
+          [savedLanguage(), lastPage?.id].find((id) =>
+            model.languages.some((l) => l.id === id),
+          ) || model.languages[0]?.id;
 
-    box.innerHTML = `
+        box.innerHTML = `
       ${identityBlock(name, profile, langIds)}
       ${weekChart(INSIGHTS.weekActivity(profile.days, { today, profile }), !!profile.days && Object.keys(profile.days).length > 0, streak, profile.bestStreak || 0)}
       ${boardSection(boards, period, profile, boardError)}
       ${progressBlock(model, progressError, selectedId)}
-      <p class="account-links"><a class="btn primary" href="${esc(lastPage ? lastPage.href : './')}">Practise</a> <button type="button" class="btn" id="sign-out">Sign out</button></p>`;
+      <p class="account-links"><a class="btn primary" href="${esc(lastPage ? lastPage.href : "./")}">Practise</a> <button type="button" class="btn" id="sign-out">Sign out</button></p>`;
 
-    // Leaderboard: the period pills redraw both tables; the switch takes you off the board or puts you back
-    const boardBox = box.querySelector('.board');
-    const drawBoards = () => {
-      if (!boards) return;
-      boardBox.querySelector('[data-board="right"]').innerHTML = boardList(boards.right[period], period);
-      boardBox.querySelector('[data-board="mastered"]').innerHTML = boardList(boards.mastered[period], period);
-    };
-    boardBox.addEventListener('click', e => {
-      const pill = e.target.closest('.board-period');
-      if (!pill) return;
-      period = pill.dataset.period;
-      boardBox.querySelectorAll('.board-period').forEach(p => p.setAttribute('aria-selected', p === pill));
-      try { localStorage.setItem(SAVED_PERIOD, period); } catch { /* private mode */ }
-      drawBoards();
-    });
-    boardBox.querySelector('#board-show').addEventListener('change', async e => {
-      const show = e.target.checked, note = boardBox.querySelector('#board-note');
-      e.target.disabled = true;
-      try {
-        await setLeaderboardHidden(user, profile, !show);
-        profile.leaderboardHidden = !show;
-        note.textContent = show ? 'You are back on the leaderboard. Your scores show up after your next answer.' : 'You are hidden, so your scores are not shared.';
-        if (!boardError) { boards = boardsFrom(await getDocs(collection(db, 'leaderboard'))); drawBoards(); }
-      } catch (err) {
-        e.target.checked = !show;
-        note.textContent = `That did not work (${err.code || err.message}). Try again.`;
+        // Leaderboard: the period pills redraw both tables; the switch takes you off the board or puts you back
+        const boardBox = box.querySelector(".board");
+        const drawBoards = () => {
+          if (!boards) return;
+          boardBox.querySelector('[data-board="right"]').innerHTML = boardList(
+            boards.right[period],
+            period,
+          );
+          boardBox.querySelector('[data-board="mastered"]').innerHTML =
+            boardList(boards.mastered[period], period);
+        };
+        boardBox.addEventListener("click", (e) => {
+          const pill = e.target.closest(".board-period");
+          if (!pill) return;
+          period = pill.dataset.period;
+          boardBox
+            .querySelectorAll(".board-period")
+            .forEach((p) => p.setAttribute("aria-selected", p === pill));
+          try {
+            localStorage.setItem(SAVED_PERIOD, period);
+          } catch {
+            /* private mode */
+          }
+          drawBoards();
+        });
+        boardBox
+          .querySelector("#board-show")
+          .addEventListener("change", async (e) => {
+            const show = e.target.checked,
+              note = boardBox.querySelector("#board-note");
+            e.target.disabled = true;
+            try {
+              await setLeaderboardHidden(user, profile, !show);
+              profile.leaderboardHidden = !show;
+              note.textContent = show
+                ? "You are back on the leaderboard. Your scores show up after your next answer."
+                : "You are hidden, so your scores are not shared.";
+              if (!boardError) {
+                boards = boardsFrom(
+                  await getDocs(collection(db, "leaderboard")),
+                );
+                drawBoards();
+              }
+            } catch (err) {
+              e.target.checked = !show;
+              note.textContent = `That did not work (${err.code || err.message}). Try again.`;
+            }
+            e.target.disabled = false;
+          });
+
+        // Change nickname: the name line becomes a small form; saving updates the name and the avatar's letter
+        const nameBox = box.querySelector(".identity-text");
+        const nameLine = box.querySelector(".identity-line")?.textContent || "";
+        const showName = (shown) => {
+          nameBox.innerHTML = identityText(shown, nameLine);
+          box.querySelector(".avatar").outerHTML = avatar(shown);
+        };
+        const editNickname = (current, error) => {
+          nameBox.innerHTML = nicknameForm(current, error);
+          const input = nameBox.querySelector("#nickname");
+          input.focus();
+          input.select();
+        };
+        nameBox.addEventListener("click", (e) => {
+          if (e.target.closest("#edit-nickname"))
+            editNickname(nameOf(profile, user));
+          if (e.target.closest("#nickname-cancel"))
+            showName(nameOf(profile, user));
+        });
+        nameBox.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const checked = NICKNAME.cleanNickname(
+            nameBox.querySelector("#nickname").value,
+          );
+          if (!checked.ok) return editNickname(checked.value, checked.error);
+          e.target.querySelector('[type="submit"]').disabled = true;
+          try {
+            await saveNickname(user, checked.value, profile);
+            Object.assign(profile, {
+              username: checked.value,
+              nicknameChosen: true,
+            });
+            showName(checked.value);
+          } catch (err) {
+            editNickname(
+              checked.value,
+              `Saving did not work (${err.code || err.message}). Try again.`,
+            );
+          }
+        });
+
+        box.querySelector("#sign-out").addEventListener("click", async () => {
+          await signOutUser();
+          location.replace("./");
+        });
       }
-      e.target.disabled = false;
-    });
-
-    // Change nickname: the name line becomes a small form; saving updates the name and the avatar's letter
-    const nameBox = box.querySelector('.identity-text');
-    const nameLine = box.querySelector('.identity-line')?.textContent || '';
-    const showName = shown => {
-      nameBox.innerHTML = identityText(shown, nameLine);
-      box.querySelector('.avatar').outerHTML = avatar(shown);
-    };
-    const editNickname = (current, error) => {
-      nameBox.innerHTML = nicknameForm(current, error);
-      const input = nameBox.querySelector('#nickname');
-      input.focus(); input.select();
-    };
-    nameBox.addEventListener('click', e => {
-      if (e.target.closest('#edit-nickname')) editNickname(nameOf(profile, user));
-      if (e.target.closest('#nickname-cancel')) showName(nameOf(profile, user));
-    });
-    nameBox.addEventListener('submit', async e => {
-      e.preventDefault();
-      const checked = NICKNAME.cleanNickname(nameBox.querySelector('#nickname').value);
-      if (!checked.ok) return editNickname(checked.value, checked.error);
-      e.target.querySelector('[type="submit"]').disabled = true;
-      try {
-        await saveNickname(user, checked.value, profile);
-        Object.assign(profile, { username: checked.value, nicknameChosen: true });
-        showName(checked.value);
-      } catch (err) {
-        editNickname(checked.value, `Saving did not work (${err.code || err.message}). Try again.`);
-      }
-    });
-
-    box.querySelector('#sign-out').addEventListener('click', async () => {
-      await signOutUser();
-      location.replace('./');
-    });
-  }
-</script>
-</body>
+    </script>
+  </body>
 </html>
