@@ -33,6 +33,7 @@ function renderAccount(user, profile) {
   box.innerHTML = user
     ? `<a href="${pageUrl('account.html')}">${escape(nameOf(profile || {}, user))}</a>`
     : `<a href="${pageUrl('signin.html')}?next=${encodeURIComponent(here())}">Sign in</a>`;
+  document.dispatchEvent(new CustomEvent('blabilingo:account'));   // the quiz's bar carries the same link
 }
 
 // Bring in what the account has, then save the combined records back so both sides match

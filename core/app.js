@@ -64,6 +64,9 @@
     order: store.get(`${APP.storagePrefix}.order`, 'weak') === 'random' ? 'random' : 'weak',
     crib: store.get(`${APP.storagePrefix}.crib`, false) === true,   // keep the tables open beside the quiz
     cribGroup: null,                                                   // the tab picked in that panel when the group is hidden
+    drawer: false,
+    confirmQuit: false,                                                // the "Leave the quiz?" question is showing                                                     // phones: the tables drawer is open
+    cribScroll: {},                                                    // how far down each group's tables were scrolled, kept while the page is open
     quiz: null,
   };
 
@@ -73,6 +76,22 @@
   const withNotes = s => esc(s).replace(/[¹²³⁴]/g, d => `<sup>${SUP[d]}</sup>`);
   const markEndings = s => esc(s).replace(/\[([^\]]*)\]/g, '<b>$1</b>');
   const colour = name => `--c: var(--${name})`;
+  // Phones keep the tables in a drawer that slides in over the quiz, always one tap away
+  const PHONE = matchMedia('(max-width: 640px)');
+  const cribOn = () => state.crib || PHONE.matches;
+  // A running quiz has the page to itself: the topics, the case picker and the Endings tab come back once it is quit or done
+  const quizRunning = () => state.view === 'quiz' && !!state.quiz && state.quiz.idx < state.quiz.queue.length;
+  // signing in comes back to the quiz, wherever the page was when the masthead's link was made
+  const backHere = href => { const url = new URL(href); url.searchParams.set('next', location.pathname + location.hash); return url.href; };
+  // the profile link in the quiz's bar, taken from the masthead's account link (core/sync.js), which can arrive later
+  function meLink() {
+    const a = $('#account a');
+    if (!a) return '';
+    const name = a.textContent.trim();
+    return /account\.html/.test(a.getAttribute('href'))
+      ? `<a class="q-me" href="${esc(a.getAttribute('href'))}" aria-label="Your profile: ${esc(name)}">${esc(name.charAt(0).toLocaleUpperCase())}</a>`
+      : `<a class="q-me signin" href="${esc(backHere(a.href))}">Sign in</a>`;
+  }
   const sel = () => state.selected[state.topic.id];
   const hasKinds = () => !!state.topic.kinds && state.topic.kinds.slice(1).every(k => state.topic.sentences.some(k[2]));
   const kindNow = () => (hasKinds() && state.topic.kinds.find(k => k[0] === state.kinds[state.topic.id])) || ['all'];
@@ -592,13 +611,27 @@
       <p class="verb-list-title">${esc(t.title)}</p>
       ${t.rows.map((r, ri) => {
         let k = 0;
-        const parts = t.forms.map(part => tenseTable({ part: true, cols: part.cols, rows: part.who.map(who => ({ who, cells: [].concat(r.forms[k++]) })) }, null, true));
-        return `<details class="verb"${hl && !hl.weak && hl.rows.has(ri) ? ' open' : ''}>
+        const on = hl && !hl.weak && hl.rows.has(ri);
+        const parts = t.forms.map(part => {
+          const rows = part.who.map(who => ({ who, cells: [].concat(r.forms[k++]) }));
+          return tenseTable({ part: true, cols: part.cols, rows }, on && hl.forms ? formSpot(rows, hl) : null, true);
+        });
+        return `<details class="verb${on ? ' hl' : ''}"${on ? ' open' : ''}>
         <summary><span class="verb-name" lang="${APP.lang}">${esc(r.who)}</span></summary>
         ${parts.join('')}
       </details>`;
       }).join('')}
     </div>`;
+  }
+  // the cells of a verb's drop-down that hold the answer, for its person when the sentence names one
+  function formSpot(rows, hl) {
+    const plain = x => x.replace(/[[\]]/g, '').toLocaleLowerCase(APP.lang);
+    const spot = { rows: new Set(), cols: new Set() };
+    rows.forEach((r, ri) => {
+      if (hl.p && !r.who.split(/\s*\/\s*/).includes(hl.p)) return;
+      r.cells.forEach((c, ci) => { if (hl.forms.has(plain(c))) { spot.rows.add(ri); spot.cols.add(ci); } });
+    });
+    return spot.rows.size ? spot : null;
   }
   const tenseTable = (t, hl, mini) => { const tints = colTints(t), split = byColumn(t);
     if (hasForms(t)) return `${verbList(t, hl, mini)}${!mini && t.note ? `<ul class="g-notes"><li>${esc(t.note)}</li></ul>` : ''}`;
@@ -767,6 +800,11 @@
 
   // the (at most two) verb tables that best show where the answer sits, each with its highlight
   function tenseHits(item, g) {
+    // verb drop-downs mark the form itself, found by the answer and its person
+    const forms = new Set(item.a.map(a => a.toLocaleLowerCase(APP.lang)));
+    return tenseHitsFor(item, g).map(h => ({ ...h, hl: { ...h.hl, forms, p: item.p } }));
+  }
+  function tenseHitsFor(item, g) {
     if (item.at) {
       // at is one [row, column] cell, or a list of them in different tables
       return atCells(item).map(([row, col]) => {
@@ -828,7 +866,7 @@
     }
     if (typeof CASES === 'undefined') return '';
     const g = state.topic.byId[item.c];
-    if (state.crib && g && (g.cases || []).includes(`${f.caseId}.${f.number}`)) return '';   // the tables panel already marks it
+    if (cribOn() && g && (g.cases || []).includes(`${f.caseId}.${f.number}`)) return '';   // the tables panel already marks it
     const c = CASES.find(x => x.id === f.caseId);
     if (!c || !(f.gender in COL) || !NUMBER_NAMES[f.number]) return '';
     const word = f.pos === 'adj' ? 'Adjectives' : 'Nouns';
@@ -957,7 +995,8 @@
     const q = state.quiz;
     const t = state.topic;
 
-    root.classList.toggle('with-crib', !!q && q.idx < q.queue.length && state.crib);
+    root.classList.toggle('with-crib', !!q && q.idx < q.queue.length && cribOn());
+    document.body.classList.toggle('quiz-mode', quizRunning());
     if (!q) {
       const saved = savedQuiz();
       root.innerHTML = `<div class="quiz-intro">
@@ -973,7 +1012,7 @@
         </fieldset>` : ''}
         ${modePicker()}
         <label class="toggle"><input type="checkbox" id="show-group" ${state.showGroup ? 'checked' : ''}> Tell me which ${t.unit} each sentence needs</label>
-        <label class="toggle"><input type="checkbox" id="crib" ${state.crib ? 'checked' : ''}> Keep the ${t.refLabel.toLowerCase()} tables open beside the quiz</label>
+        <label class="toggle crib-toggle"><input type="checkbox" id="crib" ${state.crib ? 'checked' : ''}> Keep the ${t.refLabel.toLowerCase()} tables open beside the quiz</label>
         <fieldset class="lengths">
           <legend>How many sentences?</legend>
           ${[10, 20, 50, 0].map(n => `<label><input type="radio" name="length" value="${n}" ${state.length === n ? 'checked' : ''}><span>${n || `All ${pool().length}`}</span></label>`).join('')}
@@ -1032,7 +1071,7 @@
         ${item.idiom ? `<p class="idiom-note"><b>Idiom</b> <span lang="${APP.lang}">${esc(item.idiom)}</span>: ${esc(item.means)}.${item.lit ? ` <span class="lit">Literally: ${esc(item.lit)}.</span>` : ''}</p>` : ''}
         <p class="why"><b>${esc(t.whyLabel(g))}</b> ${esc(item.why)}</p>
         ${t.id === 'cases' ? changeNote(item) : ''}
-        ${(() => { if (state.crib) return ''; if (t.id !== 'cases') return revealTables(item, g); const hl = itemHighlight(item); return hl ? `<details class="mini-grid" open>
+        ${(() => { if (cribOn()) return ''; if (t.id !== 'cases') return revealTables(item, g); const hl = itemHighlight(item); return hl ? `<details class="mini-grid" open>
           <summary>Where it sits in the table<span class="hl-label">${esc(hl.label)}</span></summary>
           ${caseGrid(g, hl, hl.number)}
         </details>` : ''; })()}
@@ -1051,14 +1090,21 @@
         <span class="key-hint">or press Enter</span>
       </div>`}`;
 
+    // the tables keep their place across redraws: remember how far down this group's tables were
+    const before = cribScroller();
+    if (before) state.cribScroll[before.closest('.crib').dataset.group] = before.scrollTop;
     root.innerHTML = `<div style="${colour(g.colour)}">
+      <div class="q-bar">
+        <button type="button" class="q-quit" data-action="quit" aria-label="Quit the quiz"></button>
+        <div class="q-progress" role="progressbar" aria-label="Sentences done" aria-valuemin="0" aria-valuemax="${q.queue.length}" aria-valuenow="${q.idx}"><i style="width:${(q.idx / q.queue.length) * 100}%"></i></div>
+        ${meLink()}
+      </div>
       <div class="q-top">
         <span>Sentence ${q.idx + 1} of ${q.queue.length}</span>
         <span>${right} right so far
           ${q.revealed ? '' : `<button type="button" class="link-btn mode-switch" data-action="switch-mode">${isNotebook() ? 'Switch to typing' : 'Switch to notebook mode'}</button>`}
-          <button type="button" class="link-btn mode-switch" data-action="toggle-crib" aria-pressed="${state.crib}">${state.crib ? 'Hide tables' : 'Show tables'}</button></span>
+          <button type="button" class="link-btn mode-switch crib-toggle" data-action="toggle-crib" aria-pressed="${state.crib}">${state.crib ? 'Hide tables' : 'Show tables'}</button></span>
       </div>
-      <div class="q-progress" aria-hidden="true"><i style="width:${(q.idx / q.queue.length) * 100}%"></i></div>
 
       <div class="q-case ${showGroup ? '' : 'hidden-case'}">${showGroup
         ? `<b lang="${APP.lang}">${esc(g.pl)}</b><i lang="${APP.lang}">${esc(g.q)}</i><span>${esc(g.en)}</span>`
@@ -1071,15 +1117,72 @@
       <p class="speech-note" id="speech-note" hidden></p>
       ${feedbackOnTop ? '' : feedbackLine()}
       ${afterReveal}
-    </div>${state.crib ? cribPanel(item) : ''}`;
+    </div>${state.confirmQuit ? `<div class="quit-ask">
+      <div class="quit-scrim" data-action="quit-no"></div>
+      <div class="quit-sheet" role="dialog" aria-modal="true" aria-labelledby="quit-title">
+        <h2 id="quit-title">Leave the quiz?</h2>
+        <p>You've done ${q.idx} of ${q.queue.length}. Your place is saved, so you can carry on later from the Quiz tab.</p>
+        <button type="button" class="btn primary" data-action="quit-no" id="quit-no">Keep going</button>
+        <button type="button" class="btn" data-action="quit-yes">Quit quiz</button>
+      </div></div>` : ''}${cribOn() ? cribPanel(item) : ''}${PHONE.matches ? `<div class="crib-scrim" data-action="toggle-crib"></div>
+      <button type="button" class="crib-fab" data-action="toggle-crib" aria-controls="crib" aria-expanded="false"><span>Tables</span></button>` : ''}`;
 
-    const focusEl = $('#next-btn') || $('#answer') || $('#reveal-btn');
-    if (focusEl) focusEl.focus({ preventScroll: true });
-    const crib = $('.crib'), cell = crib && $('.g-cell.hl', crib);
-    if (cell && crib.scrollHeight > crib.clientHeight) {
-      const top = cell.getBoundingClientRect().top - crib.getBoundingClientRect().top + crib.scrollTop;
-      crib.scrollTop = Math.max(0, top - crib.clientHeight / 3);
+    const focusEl = state.confirmQuit ? $('#quit-no') : $('#next-btn') || $('#answer') || $('#reveal-btn');
+    if (focusEl && !(PHONE.matches && state.drawer)) focusEl.focus({ preventScroll: true });
+    const scroller = cribScroller();
+    if (scroller) {
+      scroller.scrollTop = state.cribScroll[scroller.closest('.crib').dataset.group] || 0;
+      // once the answer is revealed, the tables open at the marked cell (or the verb's opened drop-down)
+      const spot = q.revealed && ($('.verb.hl .g-cell.hl', scroller) || $('.g-cell.hl, .verb.hl', scroller));
+      if (spot && scroller.scrollHeight > scroller.clientHeight) {
+        const box = scroller.getBoundingClientRect(), at = spot.getBoundingClientRect();
+        const lead = spot.matches('.verb') ? 8 : scroller.clientHeight / 4;
+        scroller.scrollTop = Math.max(0, at.top - box.top + scroller.scrollTop - lead);
+      }
     }
+    setDrawer(state.drawer && PHONE.matches, false);
+  }
+
+  // the part of the tables panel that scrolls: the drawer's body on phones, the whole panel beside the quiz
+  const cribScroller = () => { const crib = $('#view-quiz .crib'); return crib && (PHONE.matches ? $('.crib-body', crib) : crib); };
+
+  // A tab in the tables panel swaps its tables in place, so the panel (and the drawer on phones) stays put,
+  // then the new tables build up row by row
+  function swapCrib() {
+    const crib = $('#view-quiz .crib');
+    if (!crib) { renderQuiz(); return; }
+    state.cribScroll[crib.dataset.group] = cribScroller().scrollTop;
+    const made = document.createElement('template');
+    made.innerHTML = cribPanel(current()).trim();
+    const fresh = made.content.firstElementChild;
+    crib.setAttribute('style', fresh.getAttribute('style'));
+    crib.dataset.group = fresh.dataset.group;
+    crib.replaceChildren(...fresh.childNodes);
+    cribScroller().scrollTop = state.cribScroll[crib.dataset.group] || 0;
+    buildIn($('.crib-body', crib));
+  }
+
+  function buildIn(body) {
+    if (!body || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const parts = body.querySelectorAll(':is(h3, caption, tr, .verb-list-title, .verb, .g-notes, .plain-note, .by-col-title)');
+    parts.forEach((el, i) => el.style.setProperty('--i', Math.min(i, 24)));
+    body.classList.remove('building');
+    void body.offsetWidth;   // restart the animation when tabs are tapped quickly
+    body.classList.add('building');
+    clearTimeout(buildIn.done);
+    buildIn.done = setTimeout(() => body.classList.remove('building'), 1700);
+  }
+
+  function setDrawer(on, moveFocus = true) {
+    state.drawer = on;
+    const crib = $('#view-quiz .crib'), fab = $('.crib-fab');
+    if (crib) crib.classList.toggle('open', on);
+    if (!fab) return;
+    fab.setAttribute('aria-expanded', on);
+    fab.setAttribute('aria-label', on ? 'Close the tables' : 'Open the tables');
+    fab.firstElementChild.textContent = on ? 'Hide' : 'Tables';
+    fab.classList.toggle('marked', !!(crib && $('.g-cell.hl, .verb.hl', crib)));   // a dot when the tables mark the answer
+    if (moveFocus) (on ? crib : fab)?.focus({ preventScroll: true });
   }
 
   // The reference tables beside the quiz. With the group hidden, every selected group gets a tab so the panel does not give it away.
@@ -1101,10 +1204,10 @@
       body = g.tables.map(x => tenseTable(x, (hits.find(h => h.t === x) || {}).hl, true)).join('') + groupCaseGrids(g, revealed ? item : null, false);
     }
     // only name a spot the tables actually mark
-    const marked = /class="g-cell[^"]*\bhl\b/.test(body);
-    return `<aside class="crib" style="${colour(g.colour)}" aria-label="${esc(t.refLabel)} tables">
+    const marked = /class="(g-cell[^"]*\bhl\b|verb hl)"?/.test(body);
+    return `<aside class="crib${state.drawer && PHONE.matches ? ' open' : ''}" id="crib" tabindex="-1" data-group="${g.id}" style="${colour(g.colour)}" aria-label="${esc(t.refLabel)} tables">
       <div class="crib-head"><h2><span lang="${APP.lang}">${esc(g.pl)}</span><small>${esc(g.en)}</small></h2>
-        <button type="button" class="link-btn" data-action="toggle-crib">Hide</button></div>
+        <button type="button" class="link-btn crib-toggle" data-action="toggle-crib">Hide</button></div>
       ${label && marked ? `<p class="crib-hl">Where it sits: <span class="hl-label">${esc(label)}</span></p>` : ''}
       ${hidden && groups.length > 1 ? `<div class="crib-tabs" role="group" aria-label="Show the tables for">${groups.map(x => `<button type="button" style="${colour(x.colour)}" data-crib="${x.id}" aria-pressed="${x === g}" lang="${APP.lang}">${esc(x.pl)}</button>`).join('')}</div>` : ''}
       <div class="crib-body">${body}</div>
@@ -1421,6 +1524,13 @@
   }
   window.addEventListener('popstate', () => {
     const { topic, view } = readHash();
+    if (quizRunning() && (view !== 'quiz' || topic !== state.topic)) {   // back mid-quiz asks first, as Quit does
+      history.pushState(null, '', pageHash());
+      saveTyped();
+      state.confirmQuit = true;
+      renderQuiz();
+      return;
+    }
     state.view = view;
     store.set(`${APP.storagePrefix}.view`, view);
     if (topic !== state.topic) setTopic(topic.id, false); else renderView();
@@ -1438,6 +1548,7 @@
     updateLanguageLinks();
     // shared by every language (no storage prefix): the account page's "back" returns to the page practised last
     store.set('blabilingo.lastPage', { language, hash: pageHash() });
+    document.body.classList.toggle('quiz-mode', quizRunning());
     if (state.view === 'table') renderTable(); else renderQuiz();
   }
 
@@ -1529,7 +1640,7 @@
     }
 
     const cribTab = e.target.closest('[data-crib]');
-    if (cribTab) { state.cribGroup = cribTab.dataset.crib; renderQuiz(); $(`[data-crib="${state.cribGroup}"]`)?.focus(); return; }
+    if (cribTab) { state.cribGroup = cribTab.dataset.crib; swapCrib(); $(`[data-crib="${state.cribGroup}"]`)?.focus(); return; }
 
     const action = e.target.closest('[data-action]')?.dataset.action;
     if (action === 'start') startQuiz(pool());
@@ -1546,6 +1657,17 @@
       if (input) state.quiz.typed = input.value;
       setMode(isNotebook() ? 'type' : 'notebook');
       renderQuiz();
+    }
+    else if (action === 'toggle-crib' && PHONE.matches) setDrawer(!state.drawer);
+    else if (action === 'quit') { saveTyped(); state.confirmQuit = true; renderQuiz(); }
+    else if (action === 'quit-no') { state.confirmQuit = false; renderQuiz(); }
+    else if (action === 'quit-yes') {
+      // the quiz stays saved, so the Quiz tab offers to carry on with it
+      saveTyped();
+      saveQuiz();
+      Object.assign(state, { quiz: null, confirmQuit: false, drawer: false });
+      setView('table');
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
     else if (action === 'toggle-crib') {
       const input = $('#answer');
@@ -1565,6 +1687,8 @@
   document.addEventListener('keydown', e => {
     const spoken = (e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-say]');
     if (spoken) { e.preventDefault(); say(spoken.dataset.say); return; }
+    if (e.key === 'Escape' && state.confirmQuit) { state.confirmQuit = false; renderQuiz(); return; }
+    if (e.key === 'Escape' && state.drawer && PHONE.matches) { setDrawer(false); return; }
     const q = state.quiz;
     if (!q || state.view !== 'quiz' || !q.revealed || !isNotebook() || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.target.closest('input, textarea')) return;
@@ -1574,6 +1698,10 @@
   });
 
   // keep what is typed in the quiz state as it is typed, so redrawing the quiz (a table tab, showing the tables) keeps it
+  const saveTyped = () => { const input = $('#answer'); if (input && state.quiz && !state.quiz.revealed) state.quiz.typed = input.value; };
+  // leaving the page (for the profile, say) saves the sentence and what is typed, so coming back carries on from it
+  window.addEventListener('pagehide', () => { if (quizRunning()) { saveTyped(); saveQuiz(); } });
+  document.addEventListener('blabilingo:account', () => { const me = $('.q-me'); if (me) me.outerHTML = meLink(); else if (quizRunning()) renderQuiz(); });
   document.addEventListener('input', e => { if (e.target.id === 'answer' && state.quiz && !state.quiz.revealed) state.quiz.typed = e.target.value; });
 
   // a small arrow back up to the quiz, once the sentence has scrolled out of sight while checking a table further down
@@ -1596,6 +1724,9 @@
     ($('#answer') || $('#next-btn') || $('#reveal-btn'))?.focus({ preventScroll: true });
     toQuiz.hidden = true;
   });
+
+  // turning a phone to landscape or resizing a window across the phone width moves the tables in or out of the drawer
+  PHONE.addEventListener('change', () => { if (!PHONE.matches) state.drawer = false; if (state.view === 'quiz') renderQuiz(); });
 
   document.addEventListener('submit', e => { if (e.target.id === 'answer-form') { e.preventDefault(); if (!state.quiz.revealed) checkAnswer(); } });
   document.addEventListener('change', e => {
