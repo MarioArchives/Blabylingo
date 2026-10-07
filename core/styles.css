@@ -301,8 +301,8 @@ tbody tr:last-child > * { border-bottom: 0; }
 .watch { margin: .75rem 0 0; padding-left: 1.25rem; max-width: 52rem; display: grid; gap: .5rem; }
 
 /* Quiz view */
-.quiz-intro h2, .summary h2 { font: 700 2rem var(--serif); }
-.quiz-intro p, .summary > p { margin-top: .625rem; max-width: 40rem; color: var(--ink-soft); }
+.quiz-intro h2 { font: 700 2rem var(--serif); }
+.quiz-intro p { margin-top: .625rem; max-width: 40rem; color: var(--ink-soft); }
 .quiz-intro .btn, .summary .btn { margin-top: 1.5rem; }
 .toggle { display: flex; align-items: center; gap: .5rem; margin-top: 1.25rem; }
 .toggle input { width: 1.125rem; height: 1.125rem; accent-color: var(--ink); }
@@ -348,8 +348,6 @@ tbody tr:last-child > * { border-bottom: 0; }
 .grid-wrap.mini .g-form { font-size: 1.0625rem; }
 .g-cell.hl { outline: 4px solid var(--ink); outline-offset: -4px; box-shadow: inset 0 0 0 100px var(--straw); position: relative; z-index: 1; }
 .g-cell.hl .g-end, .g-cell.hl .g-ex, .g-cell.hl .g-eq { color: #000; }
-.reveal .also { margin-top: .25rem; color: var(--ink-soft); }
-.reveal .also span { font-family: var(--serif); font-size: 1.125rem; color: var(--ink); }
 
 /* Forgotten words banner: a slim strip above the Endings and Quiz views, for words often missed. */
 .forgotten { margin-bottom: 2rem; padding: .875rem 1.125rem; background: var(--paper); border: 1px solid var(--rule); }
@@ -495,13 +493,7 @@ body.quiz-mode main { padding-top: 0; }
   animation: open .25s ease;
 }
 @keyframes open { from { opacity: 0; transform: translateY(-6px); } }
-.reveal .ans { font: 700 1.75rem var(--serif); color: var(--c); }
-.reveal .ans { display: flex; flex-wrap: wrap; align-items: baseline; gap: .125rem .625rem; }
-.reveal .ans .ans-label { font: 400 1rem var(--sans); color: var(--ink-soft); }
-.reveal .ans .from { font-weight: 400; color: var(--ink-soft); }
-.reveal .ans .arrow { font-weight: 400; color: var(--ink-soft); }
-.reveal .ans small { font: 700 .8125rem var(--sans); padding: .15em .5em; background: var(--ink); color: #fff; border-radius: 2px; align-self: center; }
-.reveal .en { margin-top: .375rem; font-style: italic; color: var(--ink-soft); }
+.reveal > :first-child { margin-top: 0; }
 .reveal .why { margin-top: .875rem; }
 .reveal .idiom-note { margin-top: .875rem; padding: .5rem .75rem; border-left: 3px solid var(--c); background: color-mix(in srgb, var(--c) 7%, transparent); }
 .reveal .idiom-note b { color: var(--c); margin-right: .25rem; }
@@ -509,34 +501,61 @@ body.quiz-mode main { padding-top: 0; }
 .reveal .idiom-note .lit { display: block; color: var(--ink-soft); font-size: .9375rem; }
 .reveal .why b { color: var(--c); }
 .reveal .link-btn { margin-top: .75rem; }
+/* the revealed answer, which is also the Next button */
+.next-banner { margin-top: 1.25rem; max-width: 52rem; display: flex; align-items: center; gap: .75rem 1.25rem; padding: .875rem 1rem .875rem 1.25rem; background: var(--ink); color: #fff; border-left: 8px solid var(--c); animation: open .25s ease; }
+.next-banner.go { cursor: pointer; }
+.next-banner.go:hover { background: #000; }
+.nb-text { flex: 1; min-width: 0; }
+.next-banner .ans { display: flex; flex-wrap: wrap; align-items: baseline; gap: .125rem .625rem; font: 700 1.75rem var(--serif); color: var(--straw); }
+.next-banner .ans .ans-label { font: 400 1rem var(--sans); color: rgba(255, 255, 255, .75); }
+.next-banner .ans .from, .next-banner .ans .arrow { font-weight: 400; color: rgba(255, 255, 255, .8); }
+.next-banner .ans small { font: 700 .8125rem var(--sans); padding: .15em .5em; background: #fff; color: var(--ink); border-radius: 2px; align-self: center; }
+.next-banner .say { text-decoration-color: rgba(255, 255, 255, .45); }
+.next-banner .say:hover, .next-banner .say:focus-visible { background: rgba(255, 255, 255, .16); }
+.next-banner .also { margin-top: .25rem; color: rgba(255, 255, 255, .8); }
+.next-banner .also span { font-family: var(--serif); font-size: 1.125rem; color: #fff; }
+.next-banner .en { margin-top: .25rem; font-style: italic; color: rgba(255, 255, 255, .8); }
+.nb-go { flex: none; display: flex; align-items: center; gap: .5rem; padding: .5rem .25rem .5rem .5rem; border: 0; background: transparent; color: #fff; font: 900 1.0625rem var(--sans); white-space: nowrap; cursor: pointer; }
+.nb-go::after { content: ''; width: .5rem; height: .5rem; border: solid #fff; border-width: 3px 3px 0 0; transform: rotate(45deg); }
+.nb-go:focus-visible { outline: 3px solid var(--straw); outline-offset: 2px; }
+.next-banner + .reveal, .self-mark + .reveal { margin-top: .75rem; }
+.next-banner + .self-mark { margin-top: .875rem; }
 .next-row { margin-top: 1.5rem; display: flex; gap: .625rem; flex-wrap: wrap; align-items: center; }
 .next-row .key-hint { font-size: .875rem; color: var(--ink-soft); }
 
-.summary .score { font: 700 clamp(3rem, 9vw, 5rem)/1 var(--serif); margin-top: 1rem; color: var(--ink); }
-.missed { list-style: none; padding: 0; margin: 1rem 0 0; max-width: 46rem; }
-.missed li { padding: .75rem 0 .75rem 1rem; border-left: 6px solid var(--c); margin-top: .5rem; background: var(--paper); }
-.missed .ex { font-size: 1.1875rem; }
-.missed .ex b { color: var(--c); }
-.missed span { display: block; font-size: .9375rem; color: var(--ink-soft); }
-.summary h3 { font: 700 1.25rem var(--serif); margin-top: 2.25rem; }
-.summary .actions { display: flex; flex-wrap: wrap; gap: .625rem; }
-
-/* Score ring at the end of a quiz */
-.score-ring { display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem 2.25rem; margin: 1.5rem 0 0; }
-.ring { position: relative; width: 12rem; flex: none; }
-.ring svg { display: block; width: 100%; height: auto; }
-.ring circle { fill: none; stroke-width: 11; }
-.ring-track { stroke: var(--rule); }
-.ring-arc { stroke: var(--c); stroke-linecap: round; stroke-dasharray: 0 100; visibility: hidden; }
-.ring-num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.ring-num b { font: 700 3.25rem/1 var(--serif); color: var(--ink); font-variant-numeric: tabular-nums; }
-.ring-num span { font-size: .9375rem; color: var(--ink-soft); }
-.ring-title { font: 700 1.25rem var(--serif); }
-.ring-title span { margin-left: .375rem; font: 400 1.0625rem var(--sans); color: var(--ink-soft); }
-.ring-key { list-style: none; margin: .625rem 0 0; padding: 0; display: grid; gap: .375rem; }
-.ring-key li { display: flex; align-items: baseline; gap: .5rem; }
-.ring-key i { width: .875rem; height: .875rem; border-radius: 50%; flex: none; align-self: center; }
-.ring-key b { min-width: 1.5ch; text-align: right; font-variant-numeric: tabular-nums; }
+/* The results: the chart, the score and its bar, the missed sentences as cards to swipe through, then the buttons */
+.summary { display: grid; gap: 1rem; max-width: 52rem; }
+.done-bar { justify-content: space-between; margin-bottom: 0; }
+.done-bar h2 { font: 700 1.5rem var(--serif); }
+.done-bar .link-btn { font-weight: 700; color: var(--ink); }
+.summary .quiz-league { margin-top: 0; }
+.score-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem 1rem; }
+.summary .score { font: 900 clamp(2.75rem, 8vw, 4rem)/1 var(--sans); color: var(--ink); font-variant-numeric: tabular-nums; }
+.summary .score span { font-weight: 400; font-size: .45em; color: var(--ink-soft); }
+.score-note { color: var(--ink-soft); }
+.split { display: flex; height: .75rem; border-radius: .375rem; overflow: hidden; background: var(--rule); }
+.split i { display: block; height: 100%; }
+.split-key { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; font-size: .9375rem; color: var(--ink-soft); }
+.split-key span { display: inline-flex; align-items: center; gap: .4rem; }
+.split-key span::before { content: ''; width: .75rem; height: .75rem; border-radius: 50%; background: var(--d); }
+.split-note { font-size: .9375rem; color: var(--ink-soft); }
+.deck { display: grid; grid-auto-flow: column; grid-auto-columns: min(86%, 22rem); gap: .75rem; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; padding: .25rem .125rem .75rem; }
+.deck:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.deck-card { scroll-snap-align: start; display: grid; gap: .5rem; align-content: start; padding: 1rem 1.125rem 1.125rem; background: var(--paper); border-top: 6px solid var(--c); box-shadow: 0 1px 3px rgba(28, 32, 48, .12); }
+.deck-n { font-size: .875rem; color: var(--ink-soft); }
+.deck-card .ex { font: 400 1.375rem/1.3 var(--serif); }
+.deck-card .ex b { color: var(--c); }
+.deck-why { font-size: .9375rem; }
+.summary-actions { display: flex; flex-wrap: wrap; gap: .625rem; }
+@media (max-width: 640px) {
+  .summary { padding-bottom: 8.5rem; }   /* room for the buttons fixed below */
+  .summary-actions { position: fixed; z-index: 15; left: 0; right: 0; bottom: 0; display: grid; gap: .5rem; padding: .75rem 1rem calc(.875rem + env(safe-area-inset-bottom, 0px)); background: var(--paper); border-top: 1px solid var(--rule); }
+  .summary-actions .btn { width: 100%; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .split i { animation: split-grow .7s cubic-bezier(.2, .7, .2, 1) both; transform-origin: left; }
+  @keyframes split-grow { from { transform: scaleX(0); } }
+}
 
 /* Reference tables beside the quiz */
 body:has(#view-quiz.with-crib:not([hidden])) > nav, main:has(#view-quiz.with-crib:not([hidden])) { max-width: 104rem; }
@@ -663,7 +682,8 @@ body:has(#view-quiz.with-crib:not([hidden])) > nav, main:has(#view-quiz.with-cri
   .q-case { display: flex; margin-top: 1.25rem; padding: .5rem .75rem .5rem 1rem; }
   .sentence { font-size: 1.625rem; }
   .reveal { padding: 1rem .75rem; border-left-width: 6px; }
-  .reveal .ans { font-size: 1.5rem; }
+  .next-banner .ans { font-size: 1.5rem; }
+  .next-banner { padding-inline: 1rem .75rem; }
   .answer-row input { flex-basis: 100%; max-width: none; }
   .mode-switch { margin-left: 0; }
 

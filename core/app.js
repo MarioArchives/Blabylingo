@@ -81,6 +81,7 @@
   const cribOn = () => state.crib || PHONE.matches;
   // A running quiz has the page to itself: the topics, the case picker and the Endings tab come back once it is quit or done
   const quizRunning = () => state.view === 'quiz' && !!state.quiz && state.quiz.idx < state.quiz.queue.length;
+  const quizPage = () => state.view === 'quiz' && !!state.quiz;   // a quiz under way or its results
   // signing in comes back to the quiz, wherever the page was when the masthead's link was made
   const backHere = href => { const url = new URL(href); url.searchParams.set('next', location.pathname + location.hash); return url.href; };
   // the profile link in the quiz's bar, taken from the masthead's account link (core/sync.js), which can arrive later
@@ -996,7 +997,7 @@
     const t = state.topic;
 
     root.classList.toggle('with-crib', !!q && q.idx < q.queue.length && cribOn());
-    document.body.classList.toggle('quiz-mode', quizRunning());
+    document.body.classList.toggle('quiz-mode', quizPage());
     if (!q) {
       const saved = savedQuiz();
       root.innerHTML = `<div class="quiz-intro">
@@ -1062,12 +1063,25 @@
         <div class="answer-row"><input type="text" readonly aria-label="What you typed" value="${esc(q.typed)}"></div>`;
     }
 
-    const nextLabel = last ? 'See my results' : 'Next sentence';
+    // the revealed answer is the Next button, straight under the sentence; a notebook answer is marked first, just under it
+    const canGo = !(isNotebook() && !marked);
     const afterReveal = !q.revealed ? '' : `
+      <div class="next-banner${canGo ? ' go' : ''}"${canGo ? ' data-action="next"' : ''}>
+        <div class="nb-text">
+          <p class="ans" lang="${APP.lang}"><span class="ans-label" lang="en">Answer</span><span class="say from" tabindex="0" role="button" aria-label="Hear ${esc(item.base)}" data-say="${esc(item.base.replace(/\s*\/\s*/g, ', '))}">${esc(item.base)}</span>${shortHint(item) ? `<small lang="en">${esc(shortHint(item))}</small>` : ''}<span class="arrow" aria-hidden="true">→</span><span class="say to" tabindex="0" role="button" aria-label="Hear ${esc(item.a[0])}" data-say="${esc(item.a[0])}">${esc(item.a[0])}</span></p>
+          ${item.a.length > 1 ? `<p class="also">Also correct: <span lang="${APP.lang}">${item.a.slice(1).map(esc).join(', ')}</span></p>` : ''}
+          <p class="en">${esc(item.en)}</p>
+        </div>
+        ${canGo ? `<button type="button" class="nb-go" data-action="next" id="next-btn">${last ? 'See my results' : 'Next'}</button>` : ''}
+      </div>
+      ${isNotebook() && !marked ? `
+      <div class="next-row self-mark">
+        <span class="ask">Does your notebook match?</span>
+        <button type="button" class="btn right" data-action="mark-right">I got it right</button>
+        <button type="button" class="btn wrong" data-action="mark-wrong">I got it wrong</button>
+        <span class="key-hint">or press Y or N</span>
+      </div>` : ''}
       <div class="reveal">
-        <p class="ans" lang="${APP.lang}"><span class="ans-label" lang="en">Answer</span><span class="say from" tabindex="0" role="button" aria-label="Hear ${esc(item.base)}" data-say="${esc(item.base.replace(/\s*\/\s*/g, ', '))}">${esc(item.base)}</span>${shortHint(item) ? `<small lang="en">${esc(shortHint(item))}</small>` : ''}<span class="arrow" aria-hidden="true">→</span><span class="say to" tabindex="0" role="button" aria-label="Hear ${esc(item.a[0])}" data-say="${esc(item.a[0])}">${esc(item.a[0])}</span></p>
-        ${item.a.length > 1 ? `<p class="also">Also correct: <span lang="${APP.lang}">${item.a.slice(1).map(esc).join(', ')}</span></p>` : ''}
-        <p class="en">${esc(item.en)}</p>
         ${item.idiom ? `<p class="idiom-note"><b>Idiom</b> <span lang="${APP.lang}">${esc(item.idiom)}</span>: ${esc(item.means)}.${item.lit ? ` <span class="lit">Literally: ${esc(item.lit)}.</span>` : ''}</p>` : ''}
         <p class="why"><b>${esc(t.whyLabel(g))}</b> ${esc(item.why)}</p>
         ${t.id === 'cases' ? changeNote(item) : ''}
@@ -1077,22 +1091,8 @@
         </details>` : ''; })()}
         ${t.id === 'cases' ? '' : changeNote(item) + formTables(item)}
         <button type="button" class="link-btn" data-action="see-table" data-group="${g.id}">${esc(t.refLink(g))}</button>
-      </div>
-      ${isNotebook() && !marked ? `
-      <div class="next-row self-mark">
-        <span class="ask">Does your notebook match?</span>
-        <button type="button" class="btn right" data-action="mark-right">I got it right</button>
-        <button type="button" class="btn wrong" data-action="mark-wrong">I got it wrong</button>
-        <span class="key-hint">or press Y or N</span>
-      </div>` : `
-      <div class="next-row">
-        <button type="button" class="btn primary" data-action="next" id="next-btn">${nextLabel}</button>
-        <span class="key-hint">or press Enter</span>
-      </div>`}`;
+      </div>`;
 
-    // the tables keep their place across redraws: remember how far down this group's tables were
-    const before = cribScroller();
-    if (before) state.cribScroll[before.closest('.crib').dataset.group] = before.scrollTop;
     root.innerHTML = `<div style="${colour(g.colour)}">
       <div class="q-bar">
         <button type="button" class="q-quit" data-action="quit" aria-label="Quit the quiz"></button>
@@ -1317,6 +1317,8 @@
     </section>`;
   }
 
+  // The results: the chart first, then the score and its bar, then the missed sentences as cards to swipe through.
+  // The buttons sit under them, fixed to the bottom of the screen on phones.
   function renderSummary(root) {
     const q = state.quiz;
     store.set(`${APP.storagePrefix}.resume`, null);
@@ -1325,28 +1327,29 @@
     const solved = q.results.filter(r => r.solved).length;
     const missed = q.results.filter(r => !r.right);
     const modes = new Set(q.results.map(r => r.mode));
-    const ring = modes.has('type')
-      ? scoreRing(total, [
-          { n: right, tint: 'ins', label: 'right first time' },
-          { n: solved - right, tint: 'loc', label: 'right after another try' },
-        ], 'revealed')
-      : scoreRing(total, [{ n: right, tint: 'ins', label: 'marked right in your notebook' }], 'marked wrong');
+    const parts = modes.has('type')
+      ? [{ n: right, tint: 'ins', label: 'right first time' }, { n: solved - right, tint: 'loc', label: 'right after another try' }, { n: total - solved, tint: 'rule', label: 'revealed' }]
+      : [{ n: right, tint: 'ins', label: 'marked right' }, { n: total - right, tint: 'rule', label: 'marked wrong' }];
+    const score = total - parts[parts.length - 1].n;
+    const shown = parts.filter(p => p.n);
     const league = leagueCard(q);
     root.innerHTML = `<div class="summary">
-      <h2>Quiz finished</h2>
-      ${ring}
+      <div class="q-bar done-bar"><h2>Quiz finished</h2><button type="button" class="link-btn" data-action="done">Done</button></div>
       ${league ? league.html : ''}
-      ${modes.size > 1 ? '<p>Sentences you marked right in your notebook count as right first time.</p>' : ''}
-      ${missed.length ? `<h3>Sentences to look at again</h3>
-      <ul class="missed">${missed.map(({ item }) => { const g = state.topic.byId[item.c]; return `<li style="${colour(g.colour)}">
-        <span class="ex" lang="${APP.lang}">${joinTokens(parseSentence(item.s), tk => tk.punct ? esc(tk.punct) : tk.gap ? `<b>${esc(item.a[0])}</b>` : esc(tk.word))}</span>
-        <span>${esc(g.pl)}. ${esc(item.why)}</span></li>`; }).join('')}</ul>` : '<p>A clean sheet. Brawo!</p>'}
-      <div class="actions">
-        ${missed.length ? '<button type="button" class="btn primary" data-action="retry-missed">Practise these again</button>' : ''}
+      <div class="score-line"><p class="score">${score}<span> / ${total}</span></p>
+        <p class="score-note">${missed.length ? `${missed.length} ${missed.length === 1 ? 'sentence' : 'sentences'} to look at again` : 'A clean sheet. Brawo!'}</p></div>
+      <div class="split" role="img" aria-label="${esc(shown.map(p => `${p.n} ${p.label}`).join(', '))}">${shown.map(p => `<i style="width:${100 * p.n / total}%; background: var(--${p.tint})"></i>`).join('')}</div>
+      <p class="split-key">${shown.map(p => `<span style="--d: var(--${p.tint})">${p.n} ${esc(p.label)}</span>`).join('')}</p>
+      ${modes.size > 1 ? '<p class="split-note">Sentences you marked right in your notebook count as right first time.</p>' : ''}
+      ${missed.length ? `<div class="deck" tabindex="0" role="list" aria-label="Sentences to look at again">${missed.map(({ item }, i) => { const g = state.topic.byId[item.c]; return `<article class="deck-card" role="listitem" style="${colour(g.colour)}">
+        <span class="deck-n">${i + 1} of ${missed.length} · <span lang="${APP.lang}">${esc(g.pl)}</span></span>
+        <p class="ex" lang="${APP.lang}">${joinTokens(parseSentence(item.s), tk => tk.punct ? esc(tk.punct) : tk.gap ? `<b>${esc(item.a[0])}</b>` : esc(tk.word))}</p>
+        <p class="deck-why">${esc(item.why)}</p></article>`; }).join('')}</div>` : ''}
+      <div class="summary-actions">
+        ${missed.length ? `<button type="button" class="btn primary" data-action="retry-missed">Practise the ${missed.length} I missed</button>` : ''}
         <button type="button" class="btn ${missed.length ? '' : 'primary'}" data-action="start">Start a new quiz</button>
       </div>
     </div>`;
-    animateRings(root);
     if (league) animateLeague(root, league);
   }
 
@@ -1355,12 +1358,13 @@
     if (typeof INSIGHTS === 'undefined') return null;
     const scoresOf = items => INSIGHTS.groupScores(INSIGHTS.topicSummary(state.topic, language, items), items);
     const after = scoresOf(topicRecords());
-    const before = q.before ? scoresOf(q.before) : null;
+    // a quiz saved before scores were kept with it has nothing to grow from, so its chart grows from the middle, with no league change
+    const before = scoresOf(q.before || {});
     const name = state.topic.en;
     const svg = INSIGHTS.radarSVG(before || after, { label: name });
     if (!svg) return null;
-    const change = before ? INSIGHTS.leagueChange(before, after) : null;
-    const shown = change ? change.from : INSIGHTS.radarLeagueFor(after);
+    const change = q.before ? INSIGHTS.leagueChange(before, after) : INSIGHTS.leagueChange(after, after);
+    const shown = change.from;
     return {
       before, after, change, name,
       html: `<section class="quiz-league league-${shown.id}">
@@ -1376,7 +1380,7 @@
   // It grows at the old zoom first; a promotion then recolours the card while the chart zooms out to the new league.
   function animateLeague(root, { before, after, change, name }) {
     const card = $('.quiz-league', root);
-    if (!card || !before) return;
+    if (!card) return;
     const svg = $('svg.radar', card);
     const message = $('.league-message', card);
     const text = INSIGHTS.leagueMessage(change, name);
@@ -1416,7 +1420,8 @@
       return;
     }
     draw(start);
-    const dur = 2000, t0 = performance.now() + 900;   // starts once the score ring has filled
+    const dur = 2000, ready = performance.now() + 300;
+    let t0 = ready;
     const p = INSIGHTS.GROW_PHASE, ease = x => 1 - Math.pow(1 - x, 3);
     let swapped = false;
     const tick = now => {
@@ -1427,60 +1432,11 @@
       if (change.up && !swapped && k > p) { swapped = true; promote(); }
       if (k < 1) requestAnimationFrame(tick); else finish();
     };
-    requestAnimationFrame(tick);
-  }
-
-  // One ring, one coloured segment per kind of right answer, laid end to end.
-  // pathLength="100" makes dash lengths percentages of the circle.
-  function scoreRing(total, parts, restLabel) {
-    const pct = n => total ? 100 * n / total : 0;
-    const sum = parts.reduce((a, p) => a + p.n, 0);
-    let from = 0;
-    const arcs = parts.map(p => { const a = { ...p, from, len: pct(p.n) }; from += a.len; return a; });
-    const row = (n, label, style) => `<li><i style="${style}"></i><b>${n}</b> ${esc(label)}</li>`;
-    return `<figure class="score-ring" data-parts="${esc(JSON.stringify(arcs.map(a => [a.from, a.len])))}" data-n="${sum}">
-      <div class="ring">
-        <svg viewBox="0 0 120 120" aria-hidden="true">
-          <circle class="ring-track" cx="60" cy="60" r="52" pathLength="100"></circle>
-          ${arcs.slice().reverse().map(a => `<circle class="ring-arc" style="${colour(a.tint)}" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"></circle>`).join('')}
-        </svg>
-        <div class="ring-num"><b>${sum}</b><span>of ${total}</span></div>
-      </div>
-      <figcaption>
-        <p class="ring-title">${parts.length > 1 ? 'Right without revealing' : 'Right'} <span>${Math.round(pct(sum))}%</span></p>
-        <ul class="ring-key">
-          ${arcs.map(a => row(a.n, a.label, `background: var(--${a.tint})`)).join('')}
-          ${row(total - sum, restLabel, 'background: var(--rule)')}
-        </ul>
-      </figcaption>
-    </figure>`;
-  }
-
-  // Fill the segments one after another, as if a single pen goes round, while the number counts up.
-  function animateRings(root) {
-    const fig = $('.score-ring', root);
-    if (!fig) return;
-    const parts = JSON.parse(fig.dataset.parts), n = Number(fig.dataset.n);
-    const arcs = [...fig.querySelectorAll('.ring-arc')].reverse();   // drawn in reverse so each segment's round cap sits over the next one
-    const num = $('.ring-num b', fig);
-    const end = parts.reduce((a, [from, len]) => Math.max(a, from + len), 0);
-    const draw = fill => parts.forEach(([from, len], i) => {
-      const l = Math.max(0, Math.min(len, fill - from));
-      arcs[i].style.strokeDasharray = `${l} 100`;
-      arcs[i].style.strokeDashoffset = -from;
-      arcs[i].style.visibility = l > 0.05 ? 'visible' : 'hidden';   // a round cap on an empty dash would still show a dot
-    });
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { draw(end); return; }
-    const dur = 400 + end * 12, t0 = performance.now() + 200;
-    draw(0); num.textContent = '0';
-    const tick = now => {
-      const k = Math.min(1, Math.max(0, (now - t0) / dur));
-      const eased = 1 - Math.pow(1 - k, 3);
-      draw(end * eased);
-      num.textContent = Math.round(n * eased);
-      if (k < 1 && fig.isConnected) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
+    const go = () => { t0 = Math.max(performance.now(), ready); requestAnimationFrame(tick); };
+    // it plays once the chart is on screen, so scrolling down to it on a phone does not find it already finished
+    if (!('IntersectionObserver' in window)) { go(); return; }
+    const seen = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) { seen.disconnect(); go(); } }, { threshold: .6 });
+    seen.observe(svg);
   }
 
   function setMode(mode) {
@@ -1548,7 +1504,7 @@
     updateLanguageLinks();
     // shared by every language (no storage prefix): the account page's "back" returns to the page practised last
     store.set('blabilingo.lastPage', { language, hash: pageHash() });
-    document.body.classList.toggle('quiz-mode', quizRunning());
+    document.body.classList.toggle('quiz-mode', quizPage());
     if (state.view === 'table') renderTable(); else renderQuiz();
   }
 
@@ -1660,6 +1616,7 @@
     }
     else if (action === 'toggle-crib' && PHONE.matches) setDrawer(!state.drawer);
     else if (action === 'quit') { saveTyped(); state.confirmQuit = true; renderQuiz(); }
+    else if (action === 'done') { state.quiz = null; setView('table'); window.scrollTo({ top: 0, behavior: 'instant' }); }
     else if (action === 'quit-no') { state.confirmQuit = false; renderQuiz(); }
     else if (action === 'quit-yes') {
       // the quiz stays saved, so the Quiz tab offers to carry on with it
